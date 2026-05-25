@@ -1,0 +1,406 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  AGENCY
+  RESELLER
+  CUSTOMER
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  MAINTENANCE
+  PENDING
+}
+
+enum RefundStatus {
+  NONE
+  PARTIAL
+  FULL
+}
+
+enum LogSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  role         UserRole @default(RESELLER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // SaaS tenant relation
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  // Key relationships
+  wallets   Wallet[]
+  auditLogs AuditLog[]
+  sessions  Session[]
+  keys      ApiKey[]
+
+  @@index([role])
+}
+
+model Tenant {
+  id             String       @id @default(uuid())
+  name           String
+  slug           String       @unique
+  customDomain   String?      @unique
+  status         TenantStatus @default(PENDING)
+  brandingConfig Json? // Custom branding colors, font selections, logos
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relationships
+  users                User[]
+  stores               Store[]
+  products             Product[]
+  suppliers            Supplier[]
+  ledgerEntries        WalletLedger[]
+  auditLogs            AuditLog[]
+  commissions          Commission[]
+  transactions         Transaction[]
+  wallets              Wallet[]
+  resellerTrees        ResellerTree[]
+  LedgerJournal        LedgerJournal[]
+  LedgerEntry          LedgerEntry[]
+  ReconciliationRecord ReconciliationRecord[]
+
+  @@index([slug])
+  @@index([customDomain])
+}
+
+model Store {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  domain      String?  @unique
+  isActive    Boolean  @default(true)
+  themeConfig Json? // Local store styling presets
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+  orders   Transaction[]
+
+  @@index([tenantId])
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  storeId     String?
+  store       Store?   @relation(fields: [storeId], references: [id])
+  sku         String   @unique
+  name        String
+  category    String
+  costPrice   Decimal  @db.Decimal(12, 2)
+  sellPrice   Decimal  @db.Decimal(12, 2)
+  isAvailable Boolean  @default(true)
+  metadata    Json? // Digiflazz codes, categories, supplier mappings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transactionItems TransactionItem[]
+
+  @@index([tenantId])
+  @@index([sku])
+  @@index([category])
+}
+
+model Supplier {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String // Digiflazz, VIP Reseller, custom API partner
+  status          String   @default("ACTIVE")
+  credentials     Json // Encrypted API keys, URLs
+  successRate     Float    @default(1.0)
+  avgResponseTime Int      @default(100) // in ms
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  callbacks    SupplierCallback[]
+  transactions Transaction[]
+
+  @@index([tenantId])
+  @@index([name])
+}
+
+model Wallet {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  balance       Decimal  @default(0.00) @db.Decimal(15, 2)
+  frozenBalance Decimal  @default(0.00) @db.Decimal(15, 2)
+  currency      String   @default("IDR")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ledgerEntries   WalletLedger[]
+  withdrawals     Withdrawal[]
+  deposits        Deposit[]
+  BalanceSnapshot BalanceSnapshot[]
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+}
+
+model WalletLedger {
+  id             String   @id @default(uuid())
+  walletId       String
+  wallet         Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount         Decimal  @db.Decimal(15, 2)
+  type           String // CREDIT, DEBIT, FREEZE, UNFREEZE, CONFIRM_DEBIT
+  balanceBefore  Decimal  @db.Decimal(15, 2)
+  balanceAfter   Decimal  @db.Decimal(15, 2)
+  description    String
+  idempotencyKey String   @unique
+  orderId        String?
+  createdAt      DateTime @default(now())
+
+  transaction Transaction? @relation(fields: [orderId], references: [id])
+
+  @@index([walletId, createdAt])
+  @@index([tenantId, createdAt])
+  @@index([idempotencyKey])
+}
+
+model LedgerJournal {
+  id             String       @id @default(uuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type           String // ORDER_FREEZE, ORDER_SETTLEMENT, DEPOSIT, REFUND_CREDIT, MANUAL_ADJUSTMENT
+  description    String
+  orderId        String?
+  transaction    Transaction? @relation(fields: [orderId], references: [id])
+  idempotencyKey String       @unique
+  createdAt      DateTime     @default(now())
+
+  entries        LedgerEntry[]
+  reconciliation ReconciliationRecord?
+
+  @@index([tenantId, createdAt])
+  @@index([orderId])
+  @@index([idempotencyKey])
+}
+
+model LedgerEntry {
+  id            String        @id @default(uuid())
+  journalId     String
+  journal       LedgerJournal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  accountId     String // Can be walletId, or abstract identifiers like 'SYSTEM:REVENUE'
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type          String // CREDIT or DEBIT
+  amount        Decimal       @db.Decimal(15, 2)
+  balanceBefore Decimal?      @db.Decimal(15, 2) // Nullable for system accounts
+  balanceAfter  Decimal?      @db.Decimal(15, 2)
+  createdAt     DateTime      @default(now())
+
+  @@index([accountId, createdAt])
+  @@index([journalId])
+  @@index([tenantId, createdAt])
+}
+
+model BalanceSnapshot {
+  id            String   @id @default(uuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  periodStart   DateTime
+  periodEnd     DateTime
+  balance       Decimal  @db.Decimal(15, 2)
+  frozenBalance Decimal  @db.Decimal(15, 2)
+  createdAt     DateTime @default(now())
+
+  @@index([walletId, periodEnd])
+}
+
+model ReconciliationRecord {
+  id             String        @id @default(uuid())
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journalId      String        @unique
+  journal        LedgerJournal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  status         String // MATCHED, DISCREPANCY, RESOLVED
+  expectedAmount Decimal       @db.Decimal(15, 2)
+  actualAmount   Decimal       @db.Decimal(15, 2)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model Transaction {
+  id             String       @id @default(uuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id])
+  storeId        String?
+  store          Store?       @relation(fields: [storeId], references: [id])
+  supplierId     String?
+  supplier       Supplier?    @relation(fields: [supplierId], references: [id])
+  customerTarget String // phone number, user ID + zone ID (e.g. game account ID)
+  status         String // PENDING, PROCESSING, SUCCESS, FAILED, REFUNDED
+  totalAmount    Decimal      @db.Decimal(12, 2)
+  profitAmount   Decimal      @db.Decimal(12, 2)
+  recipientPhone String?
+  refundStatus   RefundStatus @default(NONE)
+  idempotencyIn  String?      @unique // prevent customer duplicate submissions
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  items         TransactionItem[]
+  walletLedgers WalletLedger[]
+  journals      LedgerJournal[]
+  commissions   Commission[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@index([storeId, createdAt])
+  @@index([supplierId, createdAt])
+  @@index([idempotencyIn])
+}
+
+model TransactionItem {
+  id            String      @id @default(uuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  quantity      Int         @default(1)
+  priceUnit     Decimal     @db.Decimal(12, 2)
+
+  @@index([transactionId])
+  @@index([productId])
+}
+
+model Withdrawal {
+  id          String   @id @default(uuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount      Decimal  @db.Decimal(15, 2)
+  status      String // PENDING, APPROVED, REJECTED
+  bankAccount String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([walletId])
+}
+
+model Deposit {
+  id            String   @id @default(uuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount        Decimal  @db.Decimal(15, 2)
+  status        String // PENDING, SUCCESS, EXPIRED
+  paymentMethod String // QRIS, Virtual Account, Retail
+  paymentRef    String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([walletId])
+}
+
+model ResellerTree {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentId  String
+  childId   String
+  level     Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, childId])
+  @@index([tenantId])
+}
+
+model Commission {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  resellerId    String
+  amount        Decimal     @db.Decimal(12, 2)
+  isSettled     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([tenantId])
+  @@index([resellerId])
+}
+
+model SupplierCallback {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  payload    Json
+  signature  String?
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model ApiKey {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyPrefix String    @db.VarChar(12)
+  keyHash   String    @unique
+  name      String
+  isActive  Boolean   @default(true)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  tenantId  String?
+  tenant    Tenant?     @relation(fields: [tenantId], references: [id])
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  action    String
+  details   String
+  ipAddress String?
+  userAgent String?
+  severity  LogSeverity @default(INFO)
+  createdAt DateTime    @default(now())
+
+  @@index([tenantId])
+  @@index([createdAt])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

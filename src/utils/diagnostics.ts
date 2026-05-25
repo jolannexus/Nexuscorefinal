@@ -1,0 +1,67 @@
+// Global diagnostics tracking utility
+if (typeof window !== 'undefined') {
+  (window as any).__renderCountMap = (window as any).__renderCountMap || {};
+  (window as any).__firestoreRequests = (window as any).__firestoreRequests || 0;
+  (window as any).__tenantResolutions = (window as any).__tenantResolutions || 0;
+}
+
+export const diagnostics = {
+  /**
+   * Safe increment for render counts with console output throttled.
+   */
+  logRender(componentName: string) {
+    if (typeof window === 'undefined') return;
+    const map = (window as any).__renderCountMap;
+    map[componentName] = (map[componentName] || 0) + 1;
+    
+    // Log message on every 5 renders to avoid console spam but remain visible
+    if (map[componentName] % 5 === 0 || map[componentName] <= 3) {
+      console.log(
+        `%c[DIAGNOSTIC] ${componentName} rendered ${map[componentName]} times`, 
+        'color: #8b5cf6; font-weight: bold;'
+      );
+    }
+  },
+
+  /**
+   * Tracks and increments Firestore call count.
+   */
+  incrementFirestore(operation: string, details?: string) {
+    if (typeof window === 'undefined') return;
+    (window as any).__firestoreRequests++;
+    const count = (window as any).__firestoreRequests;
+    console.log(
+      `%c[DIAGNOSTIC: FIRESTORE] #${count} - Operation: ${operation} (${details || ''})`,
+      'color: #f59e0b; font-weight: bold;'
+    );
+    
+    if (count > 100) {
+      console.error(`%c[CRITICAL] Excessive Firestore activity detected! Count is ${count}.`, 'color: red; font-size: 14px; font-weight: bold;');
+    }
+  },
+
+  /**
+   * Tracks and increments Tenant Resolution count.
+   */
+  incrementTenantResolve(hostname: string) {
+    if (typeof window === 'undefined') return;
+    (window as any).__tenantResolutions++;
+    const count = (window as any).__tenantResolutions;
+    console.log(
+      `%c[DIAGNOSTIC: TENANT] #${count} - Resolving tenant for ${hostname}`,
+      'color: #10b981; font-weight: bold;'
+    );
+  },
+
+  /**
+   * Snapshot performance metrics.
+   */
+  getSnapshot() {
+    if (typeof window === 'undefined') return { renderCountMap: {}, firestoreRequests: 0, tenantResolutions: 0 };
+    return {
+      renderCountMap: { ...(window as any).__renderCountMap },
+      firestoreRequests: (window as any).__firestoreRequests,
+      tenantResolutions: (window as any).__tenantResolutions,
+    };
+  }
+};

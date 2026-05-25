@@ -1,0 +1,8 @@
+{
+  "name": "NexusCore SaaS Foundation",
+  "description": "Enterprise-grade white-label multi-agency SaaS for digital products with real-time supplier sync and financial ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

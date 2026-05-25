@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # NexusCore Enterprise Application Service
+  nexuscore-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nexuscore/app:latest
+    container_name: nexuscore_app_prod
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://nexuscore_usr:SecureP4ssword@nexuscore-db:5432/nexuscore_db?schema=public
+      - REDIS_URL=redis://nexuscore-cache:6379/0
+      - JWT_ACCESS_SECRET=NC_Prod_Access_Secret_Key_Secure_2026
+      - JWT_REFRESH_SECRET=NC_Prod_Refresh_Secret_Key_Secure_2026
+      - ENCRYPTION_KEY=32_bytes_hexadecimal_string_encryption
+    ports:
+      - "3000:3000"
+    depends_on:
+      - nexuscore-db
+      - nexuscore-cache
+    networks:
+      - nexuscore-net
+
+  # PostgreSQL Relational Engine
+  nexuscore-db:
+    image: postgres:15-alpine
+    container_name: nexuscore_db_prod
+    restart: always
+    environment:
+      - POSTGRES_USER=nexuscore_usr
+      - POSTGRES_PASSWORD=SecureP4ssword
+      - POSTGRES_DB=nexuscore_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexuscore_usr -d nexuscore_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexuscore-net
+
+  # Redis Distributed Locks & Queue Store
+  nexuscore-cache:
+    image: redis:7-alpine
+    container_name: nexuscore_cache_prod
+    restart: always
+    command: redis-server --appendonly yes --requirepass SecureRedisPass2026
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexuscore-net
+
+  # Nginx Security reverse proxy with standard SSL rate limit configs
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nexuscore_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - nexuscore-app
+    networks:
+      - nexuscore-net
+
+networks:
+  nexuscore-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

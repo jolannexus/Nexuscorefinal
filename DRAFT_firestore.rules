@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function belongsToAgency(agencyId) {
+      return isSignedIn() && (getUserData().agencyId == agencyId || getUserData().role == 'SUPER_ADMIN');
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && getUserData().role == 'SUPER_ADMIN';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // -------------------------------------------------------------------------
+    // Default Deny
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Users Collection
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isSuperAdmin();
+      allow list: if isSuperAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if (isOwner(userId) || isSuperAdmin()) && 
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'agencyId', 'role']));
+    }
+
+    // -------------------------------------------------------------------------
+    // Agencies Collection (Multi-Tenant Root)
+    // -------------------------------------------------------------------------
+    match /agencies/{agencyId} {
+      // Resolution requires public 'get' if we want fallback/domain mapping to work before login
+      // Or we could restrict it. For now, public 'get' for branding but restrict sensitive fields?
+      // Actually, Firestore doesn't support field-level security for reads easily.
+      // We'll allow public 'get' for basic resolution.
+      allow get: if true; 
+      allow list: if isSuperAdmin();
+      allow create: if isSignedIn(); // Any user can become an agency owner? Or restrict to some onboarding?
+      allow update: if belongsToAgency(agencyId);
+
+      // --- Agency Sub-Resources ---
+      
+      match /products/{productId} {
+        allow read: if true; // Products are public for the store-front
+        allow write: if belongsToAgency(agencyId);
+      }
+
+      match /orders/{orderId} {
+        allow read: if belongsToAgency(agencyId) || isOwner(resource.data.resellerId);
+        allow create: if isSignedIn(); // Anyone can place an order?
+        allow update: if belongsToAgency(agencyId);
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if belongsToAgency(agencyId);
+      }
+
+      match /transactions/{txId} {
+        allow read: if belongsToAgency(agencyId) || isOwner(resource.data.uid);
+        allow write: if belongsToAgency(agencyId);
+      }
+    }
+  }
+}
