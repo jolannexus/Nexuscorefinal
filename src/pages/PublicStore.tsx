@@ -30,8 +30,6 @@ import { BRAND } from '../config/branding';
 import { cn } from '../utils/cn';
 import { useTenant } from '../contexts/TenantContext';
 import { diagnostics } from '../utils/diagnostics';
-import { db } from '../lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Games': Gamepad2,
