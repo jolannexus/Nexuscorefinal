@@ -1,20 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useTenant } from '../contexts/TenantContext';
+
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  CreditCard, 
-  ShieldCheck, 
-  Zap, 
-  Settings, 
-  Save, 
+
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  setDoc,
+  updateDoc
+} from 'firebase/firestore';
+
+import { db } from '../lib/firebase';
+
+import {
+  CreditCard,
+  ShieldCheck,
+  Zap,
+  Settings,
+  Save,
   CheckCircle2,
   AlertCircle,
   Building,
   Key
 } from 'lucide-react';
+
 import { cn } from '../utils/cn';
 import { Button } from '../components/ui/Button';
-
 export const PaymentSettings = () => {
   const { tenant } = useTenant();
   const [loading, setLoading] = useState(false);
