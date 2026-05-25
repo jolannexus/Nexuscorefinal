@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth } from '../lib/firebase';
 
 interface TestStep {
   id: string;
