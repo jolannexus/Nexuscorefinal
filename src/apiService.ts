@@ -36,6 +36,28 @@ export const nexusApi = {
     ];
   },
 
+  // Branding settings
+  async updateBrandingSettings(tenantId: string, branding: any): Promise<any> {
+    const res = await fetch(`${API_BASE}/tenants/${tenantId}/branding`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(branding),
+    });
+    if (!res.ok) throw new Error('Failed to update branding');
+    return res.json();
+  },
+
+  // Payment gateway settings
+  async updatePaymentSettings(tenantId: string, settings: any): Promise<any> {
+    const res = await fetch(`${API_BASE}/tenants/${tenantId}/payment`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    if (!res.ok) throw new Error('Failed to update payment settings');
+    return res.json();
+  },
+
   // Ordering
   async placeOrder(productId: string, customerData: string): Promise<Order> {
     const res = await fetch(`${API_BASE}/order/simulate`, {
@@ -43,6 +65,12 @@ export const nexusApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productId, customerData }),
     });
+    return res.json();
+  },
+  
+  async getOrders(): Promise<Order[]> {
+    const res = await fetch(`${API_BASE}/orders`);
+    if (!res.ok) throw new Error('Failed to fetch orders');
     return res.json();
   }
 };

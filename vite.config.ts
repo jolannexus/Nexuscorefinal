@@ -9,6 +9,7 @@ export default defineConfig(({mode}) => {
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
+      '__VERSION__': JSON.stringify(Date.now().toString()),
     },
     resolve: {
       alias: {
@@ -31,7 +32,6 @@ export default defineConfig(({mode}) => {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/auth'],
             'vendor-charts': ['recharts'],
             'vendor-core': ['@tanstack/react-query', 'lucide-react']
           }

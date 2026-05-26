@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTenant } from '../contexts/TenantContext';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { nexusApi } from '../apiService';
 import { 
   Palette, 
   Globe, 
@@ -53,35 +52,17 @@ export const BrandingSettings = () => {
     setLoading(true);
     setError(null);
     try {
-      try {
-        const agencyRef = doc(db, 'agencies', tenant.id);
-        await updateDoc(agencyRef, {
-          name: formData.name,
-          domain: formData.domain,
-          theme: {
-            primary: formData.primaryColor,
-            secondary: formData.secondaryColor,
-            accent: formData.primaryColor, // Matching primary for now
-          },
-          logoUrl: formData.logoUrl,
-          siteTitle: formData.siteTitle
-        });
-      } catch (fbError) {
-        console.warn('Network environment constraint saving Firestore document. Preserving options in local registry:', fbError);
-        // Fallback local session persist so it stays responsive and visual instantly
-        sessionStorage.setItem(`nexus_tenant_branding_${tenant.id}`, JSON.stringify({
-          id: tenant.id,
-          name: formData.name,
-          domain: formData.domain,
-          theme: {
-            primary: formData.primaryColor,
-            secondary: formData.secondaryColor,
-            accent: formData.primaryColor
-          },
-          logoUrl: formData.logoUrl,
-          siteTitle: formData.siteTitle
-        }));
-      }
+      await nexusApi.updateBrandingSettings(tenant.id, {
+        name: formData.name,
+        domain: formData.domain,
+        theme: {
+          primary: formData.primaryColor,
+          secondary: formData.secondaryColor,
+          accent: formData.primaryColor,
+        },
+        logoUrl: formData.logoUrl,
+        siteTitle: formData.siteTitle
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {

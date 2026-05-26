@@ -6,7 +6,6 @@ import { SupplierHealth } from '../../types/index';
 import { cn } from '../../utils/cn';
 import { motion } from 'motion/react';
 import { useAuth } from '../../contexts/AuthContext';
-import { auth } from '../../lib/firebase';
 
 export const HealthMonitor = () => {
   const { profile } = useAuth();
@@ -19,7 +18,7 @@ export const HealthMonitor = () => {
   const refreshStatuses = async () => {
     setIsRefreshing(true);
     try {
-      const token = await auth.currentUser?.getIdToken();
+      const token = localStorage.getItem('nexus_auth_token');
       const agencyIdQuery = profile?.agencyId ? `?agencyId=${profile.agencyId}` : '';
       
       const response = await fetch(`/api/suppliers/health${agencyIdQuery}`, {

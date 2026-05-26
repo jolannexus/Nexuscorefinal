@@ -30,6 +30,7 @@ import { BRAND } from '../config/branding';
 import { cn } from '../utils/cn';
 import { useTenant } from '../contexts/TenantContext';
 import { diagnostics } from '../utils/diagnostics';
+import { nexusApi } from '../apiService';
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Games': Gamepad2,
@@ -38,9 +39,9 @@ const CATEGORY_ICONS: Record<string, any> = {
   'ALL': ShoppingBag
 };
 
-export const PublicStore = () => {
+export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any, isLoading: boolean }) => {
   const navigate = useNavigate();
-  const { tenant, isLoading: tenantLoading } = useTenant();
+  // const { tenant, isLoading: tenantLoading } = useTenant(); // REMOVED
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -71,17 +72,7 @@ export const PublicStore = () => {
     setTrackingError(null);
     setTrackingResult(null);
     try {
-      let allOrders: Order[] = [];
-      try {
-        const dbOrdersRef = collection(db, 'agencies', tenant.id, 'orders');
-        const querySnapshot = await getDocs(dbOrdersRef);
-        allOrders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-      } catch (fbErr) {
-        console.warn("Firestore unreachable for order tracking. Reading PostgreSQL local transactions cache:", fbErr);
-        // Fallback local memory dataset
-        const stored = localStorage.getItem('nexus_order_history');
-        allOrders = stored ? JSON.parse(stored) : [];
-      }
+      const allOrders = await nexusApi.getOrders();
       
       const searchInput = trackOrderId.trim().toUpperCase();
       const cleanedInput = searchInput.startsWith('ORD_') ? searchInput.slice(4) : searchInput;
@@ -104,7 +95,7 @@ export const PublicStore = () => {
       }
     } catch (e: any) {
       console.error("Tracking lookup error:", e);
-      setTrackingError("Failed to lookup order. Secure database synchronization failure.");
+      setTrackingError("Failed to lookup order. Database error.");
     } finally {
       setIsTracking(false);
     }

@@ -6,8 +6,6 @@ import { supplierService } from '../../services/suppliers/supplierService';
 import { Product, SupplierConnection, Reseller } from '../../types/index';
 import { cn } from '../../utils/cn';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, getDoc, getDocs, doc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { useTenant } from '../../contexts/TenantContext';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';

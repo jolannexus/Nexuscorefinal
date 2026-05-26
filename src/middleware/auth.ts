@@ -1,28 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import admin from 'firebase-admin';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
-
-// Initialize Firebase Admin recursively
-if (!admin.apps?.length) {
-  try {
-    if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PROJECT_ID) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          // Handle line breaks in private key string
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        }),
-      });
-    } else {
-      console.warn("Using default firebase-admin initialization");
-      admin.initializeApp();
-    }
-  } catch (err) {
-    console.error("Firebase admin init failed:", err);
-  }
-}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'nexuscore-enterprise-jwt-signing-secret-key-32-chars';
 
@@ -72,7 +50,7 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
 
   const token = authHeader.split('Bearer ')[1];
   
-  // Try custom JWT verification first
+  // Try standard JWT verification
   const decodedCustom = verifyToken(token);
   if (decodedCustom) {
     req.user = {
@@ -84,20 +62,7 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
     return next();
   }
 
-  // Fallback to Firebase verify if standard Firebase token is used
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email || '',
-      role: (decodedToken as any).role || 'RESELLER',
-      tenantId: (decodedToken as any).tenantId || null
-    };
-    next();
-  } catch (error) {
-    console.warn('[Session validation fallback] Custom JWT and Firebase both invalid.');
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-  }
+  return res.status(401).json({ error: 'Unauthorized: Invalid token' });
 };
 
 // 2. Tenant Validation

@@ -4,6 +4,10 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import pinoHttp from "pino-http";
+import { env } from "./src/lib/env";
+import { logger } from "./src/lib/logger";
+import { startAllWorkers } from "./src/workers";
 import { SupplierFactory } from "./src/services/suppliers/supplierFactory";
 import { prisma } from "./src/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -24,7 +28,13 @@ import crypto from "crypto";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = env.PORT;
+
+  // Observability: Log all requests
+  app.use(pinoHttp({
+    logger,
+    autoLogging: true,
+  }));
 
   // Security Headers
   app.use(
@@ -37,7 +47,7 @@ async function startServer() {
   // Rate Limiting (API Protection)
   const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
-    max: 100, 
+    max: 1000, // Increased limit for enterprise usage
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -142,6 +152,36 @@ async function startServer() {
       return res.status(404).json({ error: "No active tenant context found" });
     }
     res.json(agency);
+  });
+
+  // Branding update
+  app.put("/api/tenants/:id/branding", requireAuth, requireTenant, requireRole(["SUPER_ADMIN", "AGENCY"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const branding = req.body;
+      await prisma.tenant.update({
+        where: { id },
+        data: { brandingConfig: JSON.stringify(branding) }
+      });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Payment settings update
+  app.put("/api/tenants/:id/payment", requireAuth, requireTenant, requireRole(["SUPER_ADMIN", "AGENCY"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const settings = req.body;
+      await prisma.tenant.update({
+        where: { id },
+        data: { paymentConfig: JSON.stringify(settings) } as any
+      });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // 1. Authenticated User Registration (PostgreSQL + Prisma)
@@ -1031,6 +1071,9 @@ async function startServer() {
   // Vite middleware or static serving configuration
   const isProd = process.env.NODE_ENV === "production" && fs.existsSync(path.join(process.cwd(), "dist/index.html"));
   
+  // Start background workers
+  startAllWorkers();
+
   if (isProd) {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
@@ -1046,8 +1089,8 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`NexusCore Server running on http://localhost:${PORT}`);
+  app.listen(Number(PORT), "0.0.0.0", () => {                
+    logger.info(`NexusCore Server running on http://localhost:${PORT}`);
   });
 }
 

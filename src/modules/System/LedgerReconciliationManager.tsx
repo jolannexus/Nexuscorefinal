@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { auth } from '../../lib/firebase';
 
 interface LedgerEntry {
   id: string;
@@ -75,7 +74,7 @@ export const LedgerReconciliationManager = () => {
   const fetchJournals = async () => {
     setLoadingJournals(true);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = localStorage.getItem('nexus_auth_token');
       if (!idToken) return;
 
       const response = await fetch('/api/reconciliation/ledger', {
@@ -100,7 +99,7 @@ export const LedgerReconciliationManager = () => {
     setRunningReconciliation(true);
     setMessage(null);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = localStorage.getItem('nexus_auth_token');
       if (!idToken) {
         setMessage({ type: 'danger', text: 'Authorization required to trigger billing reconciliation.' });
         return;
