@@ -4,18 +4,26 @@ import { logger } from './logger';
 
 let client: Redis | null = null;
 
-export function getRedisClient(): Redis {
-  if (!client) {
-    const redisConfig = {
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false, // Prevent ready check from causing reconnect loops
-      retryStrategy: (times: number) => {
-        if (times > 5) return null; // Stop trying after 5 attempts
-        return Math.min(times * 1000, 5000); // Exponential backoff between 1s and 5s
-      }
-    };
+export function getRedisClient(forceNew = false): Redis {
+  const redisConfig: any = {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: true,
+    enableOfflineQueue: true,
+    retryStrategy: (times: number) => {
+      // Linear-exponential backoff: retry and cap at 3000ms delay
+      const delay = Math.min(times * 200, 3000);
+      return delay;
+    }
+  };
 
-    client = new Redis(env.REDIS_URL, redisConfig);
+  const url = env.REDIS_URL;
+
+  if (forceNew) {
+    return new Redis(url, redisConfig);
+  }
+
+  if (!client) {
+    client = new Redis(url, redisConfig);
 
     client.on('error', (err) => {
       logger.error(err, 'Redis connection error');

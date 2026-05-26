@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
-import { logger } from '../../utils/logger';
+import { financialLogger as logger } from '../../lib/logger';
+import { reconciliationDrift, settlementAnomalyCounter } from '../../lib/metrics';
 import { metrics } from '../../utils/metrics';
 
 export interface DriftReport {
@@ -28,7 +29,7 @@ export class ReconciliationService {
    * Run a full tenant-scoped reconciliation job to detect and optionally heal financial drift
    */
   static async runReconciliation(tenantId: string, autoHeal = false) {
-    logger.info(`Starting reconciliation audit for tenant: ${tenantId}`, { tenantId, autoHeal });
+    logger.info({ tenantId, autoHeal }, `Starting reconciliation audit for tenant: ${tenantId}`);
     
     const startTimeResult = Date.now();
     const driftReports: DriftReport[] = [];
@@ -112,7 +113,7 @@ export class ReconciliationService {
 
       if (driftDetected) {
         anomalyCount++;
-        logger.warn(`Ledger Balance Drift detected for Wallet: ${wallet.id}`, {
+        logger.warn({
           walletId: wallet.id,
           recordedBalance,
           computedBalance,
@@ -120,7 +121,7 @@ export class ReconciliationService {
           computedFrozen,
           activeDrift,
           frozenDrift
-        });
+        }, `Ledger Balance Drift detected for Wallet: ${wallet.id}`);
         metrics.increment('reconciliation.drift.detected', { tenant: tenantId, wallet: wallet.id });
 
         if (autoHeal) {
@@ -157,11 +158,11 @@ export class ReconciliationService {
       const ageMinutes = Math.round((Date.now() - trx.createdAt.getTime()) / 60000);
       let actionTaken: 'NONE' | 'CANCELLED_AND_REFUNDED' | 'HEALED' = 'NONE';
 
-      logger.warn(`Stuck Transaction detected: ${trx.id} (Age: ${ageMinutes}m)`, {
+      logger.warn({
         transactionId: trx.id,
         status: trx.status,
         createdAt: trx.createdAt
-      });
+      }, `Stuck Transaction detected: ${trx.id} (Age: ${ageMinutes}m)`);
       metrics.increment('reconciliation.stuck_transaction.detected', { tenant: tenantId });
 
       if (autoHeal) {
@@ -198,11 +199,11 @@ export class ReconciliationService {
     integrityScore = Math.max(0, 100 - (anomalyCount / (processedWallets || 1)) * 100);
 
     metrics.timing('reconciliation.job.latency', Date.now() - startTimeResult, { tenant: tenantId });
-    logger.info(`Reconciliation audit completed for tenant: ${tenantId}. Integrity Score: ${integrityScore}%`, {
+    logger.info({
       tenantId,
       integrityScore,
       anomalyCount
-    });
+    }, `Reconciliation audit completed for tenant: ${tenantId}. Integrity Score: ${integrityScore}%`);
 
     return {
       timestamp: new Date(),

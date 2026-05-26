@@ -88,30 +88,30 @@ const safeLazy = (importFunction: () => Promise<any>) =>
 
 const APP_VERSION = '1.0.0';
 
-const Dashboard = safeLazy(() => import(`./pages/Dashboard?v=${APP_VERSION}`).then(m => ({ default: m.Dashboard })));
-const Suppliers = safeLazy(() => import(`./pages/Suppliers?v=${APP_VERSION}`).then(m => ({ default: m.Suppliers })));
-const ResellersPage = safeLazy(() => import(`./pages/Resellers?v=${APP_VERSION}`).then(m => ({ default: m.ResellersPage })));
-const ServicesPage = safeLazy(() => import(`./pages/Services?v=${APP_VERSION}`).then(m => ({ default: m.ServicesPage })));
-const ProductDashboard = safeLazy(() => import(`./pages/products/ProductDashboard?v=${APP_VERSION}`).then(m => ({ default: m.ProductDashboard })));
-const StreamingDatabase = safeLazy(() => import(`./pages/products/StreamingDatabase?v=${APP_VERSION}`).then(m => ({ default: m.StreamingDatabase })));
-const GameDatabase = safeLazy(() => import(`./pages/products/GameDatabase?v=${APP_VERSION}`).then(m => ({ default: m.GameDatabase })));
-const SystemConfigPage = safeLazy(() => import(`./pages/SystemConfig?v=${APP_VERSION}`).then(m => ({ default: m.SystemConfigPage })));
-const OperationsCenterPage = safeLazy(() => import(`./pages/OperationsCenter?v=${APP_VERSION}`).then(m => ({ default: m.OperationsCenter })));
-const SupportPage = safeLazy(() => import(`./pages/Support?v=${APP_VERSION}`).then(m => ({ default: m.SupportPage })));
-const MarketingPage = safeLazy(() => import(`./pages/Marketing?v=${APP_VERSION}`).then(m => ({ default: m.MarketingPage })));
-const BadgesPage = safeLazy(() => import(`./pages/Badges?v=${APP_VERSION}`).then(m => ({ default: m.BadgesPage })));
-const BrandingSettings = safeLazy(() => import(`./pages/BrandingSettings?v=${APP_VERSION}`).then(m => ({ default: m.BrandingSettings })));
-const PaymentSettings = safeLazy(() => import(`./pages/PaymentSettings?v=${APP_VERSION}`).then(m => ({ default: m.PaymentSettings })));
-const SecurityCenter = safeLazy(() => import(`./pages/SecurityCenter?v=${APP_VERSION}`).then(m => ({ default: m.SecurityCenter })));
-const TeamManagement = safeLazy(() => import(`./pages/TeamManagement?v=${APP_VERSION}`));
-const DevSettings = safeLazy(() => import(`./pages/DevSettings?v=${APP_VERSION}`));
-const TransactionHistoryPage = safeLazy(() => import(`./pages/billing/TransactionHistory?v=${APP_VERSION}`).then(m => ({ default: m.TransactionHistoryPage })));
-const DepositSystemPage = safeLazy(() => import(`./pages/billing/DepositSystem?v=${APP_VERSION}`).then(m => ({ default: m.DepositSystemPage })));
-const Login = safeLazy(() => import(`./pages/auth/Login?v=${APP_VERSION}`).then(m => ({ default: m.Login })));
-const Register = safeLazy(() => import(`./pages/auth/Register?v=${APP_VERSION}`).then(m => ({ default: m.Register })));
-const ForgotPassword = safeLazy(() => import(`./pages/auth/ForgotPassword?v=${APP_VERSION}`).then(m => ({ default: m.ForgotPassword })));
-const Landing = safeLazy(() => import(`./pages/Landing?v=${APP_VERSION}`).then(m => ({ default: m.Landing })));
-const OnboardingFlow = safeLazy(() => import(`./pages/onboarding/OnboardingFlow?v=${APP_VERSION}`).then(m => ({ default: m.OnboardingFlow })));
+const Dashboard = safeLazy(() => import(`./pages/Dashboard`).then(m => ({ default: m.Dashboard })));
+const Suppliers = safeLazy(() => import(`./pages/Suppliers`).then(m => ({ default: m.Suppliers })));
+const ResellersPage = safeLazy(() => import(`./pages/Resellers`).then(m => ({ default: m.ResellersPage })));
+const ServicesPage = safeLazy(() => import(`./pages/Services`).then(m => ({ default: m.ServicesPage })));
+const ProductDashboard = safeLazy(() => import(`./pages/products/ProductDashboard`).then(m => ({ default: m.ProductDashboard })));
+const StreamingDatabase = safeLazy(() => import(`./pages/products/StreamingDatabase`).then(m => ({ default: m.StreamingDatabase })));
+const GameDatabase = safeLazy(() => import(`./pages/products/GameDatabase`).then(m => ({ default: m.GameDatabase })));
+const SystemConfigPage = safeLazy(() => import(`./pages/SystemConfig`).then(m => ({ default: m.SystemConfigPage })));
+const OperationsCenterPage = safeLazy(() => import(`./pages/OperationsCenter`).then(m => ({ default: m.OperationsCenter })));
+const SupportPage = safeLazy(() => import(`./pages/Support`).then(m => ({ default: m.SupportPage })));
+const MarketingPage = safeLazy(() => import(`./pages/Marketing`).then(m => ({ default: m.MarketingPage })));
+const BadgesPage = safeLazy(() => import(`./pages/Badges`).then(m => ({ default: m.BadgesPage })));
+const BrandingSettings = safeLazy(() => import(`./pages/BrandingSettings`).then(m => ({ default: m.BrandingSettings })));
+const PaymentSettings = safeLazy(() => import(`./pages/PaymentSettings`).then(m => ({ default: m.PaymentSettings })));
+const SecurityCenter = safeLazy(() => import(`./pages/SecurityCenter`).then(m => ({ default: m.SecurityCenter })));
+const TeamManagement = safeLazy(() => import(`./pages/TeamManagement`));
+const DevSettings = safeLazy(() => import(`./pages/DevSettings`));
+const TransactionHistoryPage = safeLazy(() => import(`./pages/billing/TransactionHistory`).then(m => ({ default: m.TransactionHistoryPage })));
+const DepositSystemPage = safeLazy(() => import(`./pages/billing/DepositSystem`).then(m => ({ default: m.DepositSystemPage })));
+const Login = safeLazy(() => import(`./pages/auth/Login`).then(m => ({ default: m.Login })));
+const Register = safeLazy(() => import(`./pages/auth/Register`).then(m => ({ default: m.Register })));
+const ForgotPassword = safeLazy(() => import(`./pages/auth/ForgotPassword`).then(m => ({ default: m.ForgotPassword })));
+const Landing = safeLazy(() => import(`./pages/Landing`).then(m => ({ default: m.Landing })));
+const OnboardingFlow = safeLazy(() => import(`./pages/onboarding/OnboardingFlow`).then(m => ({ default: m.OnboardingFlow })));
 const PublicStore = safeLazy(() => import('./pages/PublicStore').then(m => ({ default: m.PublicStore })));
 
 // Loading Fallback Component

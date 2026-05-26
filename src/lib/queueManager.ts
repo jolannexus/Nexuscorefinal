@@ -6,6 +6,9 @@ export enum QueueName {
   TRANSACTION_PROCESSING = 'transaction-processing',
   WEBHOOK_DELIVERY = 'webhook-delivery',
   RECONCILIATION = 'reconciliation',
+  SETTLEMENT = 'settlement',
+  PAYOUT = 'payout',
+  AUDIT = 'audit',
 }
 
 // Queue initialization helper
@@ -13,11 +16,13 @@ export const createQueue = (name: QueueName) => {
   return new Queue(name, {
     connection: getRedisClient(),
     defaultJobOptions: {
-      attempts: 3,
+      attempts: 5,
       backoff: {
         type: 'exponential',
         delay: 5000,
       },
+      removeOnComplete: true,
+      removeOnFail: false, // Keep failures for dead-letter analysis
     },
   });
 };
@@ -26,10 +31,13 @@ export const createQueue = (name: QueueName) => {
 export const transactionQueue = createQueue(QueueName.TRANSACTION_PROCESSING);
 export const webhookQueue = createQueue(QueueName.WEBHOOK_DELIVERY);
 export const reconciliationQueue = createQueue(QueueName.RECONCILIATION);
+export const settlementQueue = createQueue(QueueName.SETTLEMENT);
+export const payoutQueue = createQueue(QueueName.PAYOUT);
+export const auditQueue = createQueue(QueueName.AUDIT);
 
 // Initialize QueueEvents for monitoring
 export const setupQueueMonitoring = (name: QueueName) => {
-  const events = new QueueEvents(name, { connection: getRedisClient() });
+  const events = new QueueEvents(name, { connection: getRedisClient(true) });
   
   events.on('failed', ({ jobId, failedReason }) => {
     logger.error(`Job ${jobId} failed in ${name}: ${failedReason}`);

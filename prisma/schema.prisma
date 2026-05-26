@@ -80,6 +80,10 @@ model Tenant {
   LedgerJournal        LedgerJournal[]
   LedgerEntry          LedgerEntry[]
   ReconciliationRecord ReconciliationRecord[]
+  SettlementRecord     SettlementRecord[]
+  escrowBalances       EscrowBalance[]
+  reconciliationDrifts ReconciliationDrift[]
+  financialAuditLogs   FinancialAuditLog[]
 
   @@index([slug])
   @@index([customDomain])
@@ -160,6 +164,7 @@ model Wallet {
   withdrawals     Withdrawal[]
   deposits        Deposit[]
   BalanceSnapshot BalanceSnapshot[]
+  escrowBalances  EscrowBalance[]
 
   @@unique([userId, tenantId])
   @@index([tenantId])
@@ -275,6 +280,7 @@ model Transaction {
   walletLedgers WalletLedger[]
   journals      LedgerJournal[]
   commissions   Commission[]
+  settlement    SettlementRecord?
 
   @@index([tenantId, createdAt])
   @@index([tenantId, status, createdAt])
@@ -403,4 +409,95 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model SettlementRecord {
+  id             String      @id @default(uuid())
+  tenantId       String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactionId  String      @unique
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  amount         Decimal     @db.Decimal(15, 2)
+  supplierAmount Decimal     @db.Decimal(15, 2)
+  profitAmount   Decimal     @db.Decimal(15, 2)
+  status         String      // PENDING, COMPLETED, FAILED
+  settledAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model EscrowBalance {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  walletId      String?
+  wallet        Wallet?     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount        Decimal     @db.Decimal(15, 2)
+  status        String      // HELD, RELEASED, REFUNDED
+  currency      String      @default("IDR")
+  description   String?
+  orderId       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@index([walletId])
+}
+
+model ReconciliationDrift {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountId     String
+  driftAmount   Decimal     @db.Decimal(15, 2)
+  status        String      // UNRESOLVED, INVESTIGATING, RESOLVED
+  detectedAt    DateTime    @default(now())
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([tenantId, status])
+  @@index([accountId])
+}
+
+model FinancialAuditLog {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  action        String      // LEDGER_COMMIT, BALANCE_MUTATION, ESCROW_HOLD, SETTLEMENT_FINALIZE
+  details       String      @db.Text
+  severity      String      @default("INFO")
+  userId        String?
+  correlationId String?
+  fingerprint   String      // SHA256 cryptographic check of the event contents
+  createdAt     DateTime    @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([correlationId])
+}
+
+model IdempotencyKey {
+  id            String      @id @default(uuid())
+  key           String      @unique
+  requestPath   String
+  responseBody  String      @db.Text
+  statusCode    Int
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+
+  @@index([key])
+  @@index([expiresAt])
+}
+
+model TransactionLock {
+  id            String      @id @default(uuid())
+  lockKey       String      @unique
+  acquiredAt    DateTime    @default(now())
+  expiresAt     DateTime
+
+  @@index([lockKey])
 }

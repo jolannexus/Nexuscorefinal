@@ -1,3 +1,4 @@
+import "./src/lib/tracing";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -24,16 +25,41 @@ import {
   generateToken,
   verifyToken,
 } from "./src/middleware/auth";
+import { idempotencyMiddleware } from "./src/middleware/idempotency";
 import crypto from "crypto";
+import { TenantCacheService } from "./src/services/tenant/TenantCacheService";
+import { LedgerEngine, LedgerAccountType } from "./src/services/financial/LedgerEngine";
+
+import { register } from "./src/lib/metrics";
 
 async function startServer() {
   const app = express();
+  app.set("trust proxy", 1); // Trust first proxy for rate limiting (X-Forwarded-For)
   const PORT = env.PORT;
+
+  // Expose Prometheus metrics
+  app.get("/metrics", async (req, res) => {
+    try {
+      res.set("Content-Type", register.contentType);
+      res.end(await register.metrics());
+    } catch (ex) {
+      res.status(500).end(ex);
+    }
+  });
+
+  // Correlation ID & Traceability Middleware
+  app.use((req: any, res, next) => {
+    const correlationId = req.headers['x-correlation-id'] || req.headers['correlation-id'] || crypto.randomUUID();
+    req.correlationId = correlationId;
+    res.setHeader('X-Correlation-ID', correlationId);
+    next();
+  });
 
   // Observability: Log all requests
   app.use(pinoHttp({
     logger,
-    autoLogging: true,
+    autoLogging: false,
+    genReqId: (req: any) => req.correlationId || crypto.randomUUID()
   }));
 
   // Security Headers
@@ -45,20 +71,13 @@ async function startServer() {
   );
 
   // Rate Limiting (API Protection)
-  const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 1000, // Increased limit for enterprise usage
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      error: "Too many requests from this IP, please try again after 15 minutes",
-    },
-  });
+  const { globalApiLimiter } = await import("./src/middleware/rateLimit");
+  app.use("/api", globalApiLimiter);
 
   // Body parser
   app.use(express.json({
     verify: (req: any, res, buf) => {
-      req.rawBody = buf;
+      req.rawBody = buf.toString(); // For exact HMAC signature checks
     }
   }));
 
@@ -71,15 +90,11 @@ async function startServer() {
 
     try {
       // 1. Try mapping by custom domain in SQL database
-      let tenant = await prisma.tenant.findUnique({
-        where: { customDomain: host }
-      }).catch(() => null);
+      let tenant = await TenantCacheService.getTenantByDomain(host);
 
       // 2. Try subdomain slug lookup
       if (!tenant && potentialSlug) {
-        tenant = await prisma.tenant.findUnique({
-          where: { slug: potentialSlug }
-        }).catch(() => null);
+        tenant = await TenantCacheService.getTenantBySlug(potentialSlug);
       }
 
       // 3. Fallback to active Tenant if none discovered
@@ -136,6 +151,8 @@ async function startServer() {
     }
   });
 
+  app.use(idempotencyMiddleware);
+
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({
@@ -159,10 +176,11 @@ async function startServer() {
     try {
       const { id } = req.params;
       const branding = req.body;
-      await prisma.tenant.update({
+      const t = await prisma.tenant.update({
         where: { id },
         data: { brandingConfig: JSON.stringify(branding) }
       });
+      await TenantCacheService.invalidateTenant(t);
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -174,10 +192,11 @@ async function startServer() {
     try {
       const { id } = req.params;
       const settings = req.body;
-      await prisma.tenant.update({
+      const t = await prisma.tenant.update({
         where: { id },
         data: { paymentConfig: JSON.stringify(settings) } as any
       });
+      await TenantCacheService.invalidateTenant(t);
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -787,17 +806,40 @@ async function startServer() {
           data: {
             userId: user.id,
             tenantId: (req as any).agency.id,
-            balance: walletAmt,
+            balance: 0,
             frozenBalance: 0
           }
         });
-      } else if (walletAmt > 0) {
-        wallet = await prisma.wallet.update({
-          where: { id: wallet.id },
-          data: {
-            balance: { increment: walletAmt }
-          }
+      }
+
+      if (walletAmt > 0) {
+        await LedgerEngine.recordTransaction({
+          tenantId: (req as any).agency.id,
+          type: 'DEPOSIT',
+          description: `Onboarding administrative fund for user ${user.email}`,
+          idempotencyKey: `prefund_${wallet.id}_${Date.now()}`,
+          entries: [
+            {
+              accountId: 'SYSTEM_LIABILITY',
+              accountType: LedgerAccountType.SYSTEM_LIABILITY,
+              type: 'DEBIT',
+              amount: walletAmt,
+            },
+            {
+              accountId: wallet.id,
+              accountType: LedgerAccountType.USER_WALLET,
+              type: 'CREDIT',
+              amount: walletAmt,
+            }
+          ]
         });
+
+        const reloaded = await prisma.wallet.findUnique({
+          where: { id: wallet.id }
+        });
+        if (reloaded) {
+          wallet = reloaded;
+        }
       }
 
       res.json({
@@ -932,7 +974,6 @@ async function startServer() {
   // Core Fulfillment Pipeline
   app.post(
     "/api/orders/process",
-    apiLimiter,
     async (req, res) => {
       const { orderId, agencyId } = req.body;
       if (!orderId || !agencyId)
@@ -997,7 +1038,6 @@ async function startServer() {
   // Webhook Receiver with HMAC verification
   app.post(
     "/api/webhooks/digiflazz",
-    apiLimiter,
     verifyWebhookSignature("DIGIFLAZZ_SECRET"),
     async (req, res) => {
       console.log("Verified Digiflazz Webhook Payload:", req.body);
@@ -1068,11 +1108,215 @@ async function startServer() {
     },
   );
 
+  // --- DOUBLE-ENTRY LEDGER & FINANCIAL INTEGRITY ENDPOINTS ---
+  app.post(
+    "/api/financial/deposit",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { BalanceManager } = await import("./src/services/financial/BalanceManager");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, amount, idempotencyKey, description } = req.body;
+
+        if (!walletId || !amount || !idempotencyKey) {
+          return res.status(400).json({ error: "walletId, amount and idempotencyKey are required" });
+        }
+
+        const journal = await BalanceManager.depositFunds(
+          tenantId,
+          walletId,
+          amount,
+          idempotencyKey,
+          description || "Deposit via Financial Portal"
+        );
+
+        res.json({ success: true, journalId: journal.id, message: "Funds deposited successfully via Ledger Double-Entry" });
+      } catch (err: any) {
+        console.error("Ledger Deposit failed:", err);
+        res.status(500).json({ error: err.message || "Ledger deposit operations failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/financial/withdraw",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { BalanceManager } = await import("./src/services/financial/BalanceManager");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, amount, idempotencyKey, description } = req.body;
+
+        if (!walletId || !amount || !idempotencyKey) {
+          return res.status(400).json({ error: "walletId, amount and idempotencyKey are required" });
+        }
+
+        const journal = await BalanceManager.withdrawFunds(
+          tenantId,
+          walletId,
+          amount,
+          idempotencyKey,
+          description || "Withdrawal via Financial Portal"
+        );
+
+        res.json({ success: true, journalId: journal.id, message: "Funds withdrawn successfully via Ledger Double-Entry" });
+      } catch (err: any) {
+        console.error("Ledger Withdrawal failed:", err);
+        res.status(400).json({ error: err.message || "Ledger withdrawal operations failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/financial/settle/initiate",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { SettlementEngine } = await import("./src/services/financial/SettlementEngine");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, amount, orderId, idempotencyKey } = req.body;
+
+        if (!walletId || !amount || !orderId || !idempotencyKey) {
+          return res.status(400).json({ error: "walletId, amount, orderId and idempotencyKey are required" });
+        }
+
+        const settlement = await SettlementEngine.initiateSettlement(
+          tenantId,
+          walletId,
+          amount,
+          orderId,
+          idempotencyKey
+        );
+
+        res.json({ success: true, settlementId: settlement.id, message: "Settlement flow initiated and held in Escrow" });
+      } catch (err: any) {
+        console.error("Initiate Settlement failed:", err);
+        res.status(500).json({ error: err.message || "Settlement initiation failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/financial/settle/commit",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { SettlementEngine } = await import("./src/services/financial/SettlementEngine");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { orderId, supplierSettlementAmount, idempotencyKey } = req.body;
+
+        if (!orderId || supplierSettlementAmount === undefined || !idempotencyKey) {
+          return res.status(400).json({ error: "orderId, supplierSettlementAmount and idempotencyKey are required" });
+        }
+
+        const settlement = await SettlementEngine.commitSettlement(
+          tenantId,
+          orderId,
+          supplierSettlementAmount,
+          idempotencyKey
+        );
+
+        res.json({ success: true, settlementId: settlement.id, message: "Settlement successfully committed and paid" });
+      } catch (err: any) {
+        console.error("Commit Settlement failed:", err);
+        res.status(500).json({ error: err.message || "Settlement commitment failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/financial/settle/rollback",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { SettlementEngine } = await import("./src/services/financial/SettlementEngine");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, orderId, idempotencyKey, reason } = req.body;
+
+        if (!walletId || !orderId || !idempotencyKey) {
+          return res.status(400).json({ error: "walletId, orderId and idempotencyKey are required" });
+        }
+
+        const settlement = await SettlementEngine.rollbackSettlement(
+          tenantId,
+          walletId,
+          orderId,
+          idempotencyKey,
+          reason || "Settlement rollback transaction triggered"
+        );
+
+        res.json({ success: true, settlementId: settlement.id, message: "Settlement successfully rolled back and escrow refunded" });
+      } catch (err: any) {
+        console.error("Rollback Settlement failed:", err);
+        res.status(500).json({ error: err.message || "Settlement rollback failed" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/financial/integrity",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { FinancialIntegrityService } = await import("./src/services/financial/FinancialIntegrityService");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+
+        const report = await FinancialIntegrityService.performIntegrityAudit(tenantId);
+        res.json({ success: true, report });
+      } catch (err: any) {
+        console.error("Financial Integrity validation failed:", err);
+        res.status(500).json({ error: err.message || "Financial integrity scan failed" });
+      }
+    }
+  );
+
+  // Enterprise Health Checks
+  app.get("/health", async (req, res) => {
+    res.json({ status: "up", timestamp: new Date(), version: "1.0.0" });
+  });
+
+  app.get("/live", (req, res) => {
+    res.json({ status: "alive" });
+  });
+
+  app.get("/ready", async (req, res) => {
+    try {
+      // 1. PostgreSQL Check
+      await prisma.$queryRaw`SELECT 1`;
+      
+      // 2. Redis Check
+      const redis = require('./src/lib/redis').getRedisClient();
+      if (redis.status !== 'ready') {
+        throw new Error('Redis is not ready');
+      }
+      
+      // 3. Queue Check Check
+      const isQueueActive = await QueueService.getInstance().isReady();
+      if (!isQueueActive) {
+        throw new Error('Queue service not ready');
+      }
+      
+      res.json({
+        status: "ready",
+        components: {
+          database: "up",
+          redis: "up",
+          queue: "up"
+        }
+      });
+    } catch (e: any) {
+      res.status(503).json({
+        status: "not_ready",
+        error: e.message
+      });
+    }
+  });
+
   // Vite middleware or static serving configuration
   const isProd = process.env.NODE_ENV === "production" && fs.existsSync(path.join(process.cwd(), "dist/index.html"));
   
   // Start background workers
-  startAllWorkers();
+  const { shutdown: stopWorkers } = startAllWorkers();
 
   if (isProd) {
     const distPath = path.join(process.cwd(), "dist");
@@ -1089,9 +1333,45 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.listen(Number(PORT), "0.0.0.0", () => {                
-    logger.info(`NexusCore Server running on http://localhost:${PORT}`);
+  const server = app.listen(Number(PORT), "0.0.0.0", () => {                
+    logger.info(`NexusCore Production Engine running on http://localhost:${PORT}`);
   });
+
+  // Enterprise Graceful shutdown
+  const shutdown = async () => {
+    logger.info("SIGTERM/SIGINT received. Initiating enterprise graceful shutdown...");
+    
+    // 1. Stop taking new requests
+    server.close(async () => {
+      logger.info("Express server ingress closed.");
+      
+      try {
+        // 2. Stop workers slowly
+        await stopWorkers();
+        
+        // 3. Stop queue connections
+        await QueueService.getInstance().gracefulShutdown();
+
+        // 4. Close Database
+        await prisma.$disconnect();
+        logger.info("PostgreSQL connections safely closed.");
+        
+        process.exit(0);
+      } catch (err: any) {
+         logger.error(err, "Error during graceful disconnect:");
+         process.exit(1);
+      }
+    });
+    
+    // Fallback terminator 
+    setTimeout(() => {
+      logger.error("Forcing shutdown after 15s timeout");
+      process.exit(1);
+    }, 15000);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 startServer();

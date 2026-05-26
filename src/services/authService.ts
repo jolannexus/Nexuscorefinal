@@ -57,14 +57,6 @@ export const authService = {
     localStorage.removeItem("nexus_auth_token");
   },
 
-  async syncUser(
-    firebaseUser: any,
-    defaultRole: Role = "AGENCY",
-    agencyId?: string,
-  ) {
-    return;
-  },
-
   async getUserRole(uid: string): Promise<Role | null> {
     try {
       const token = this.getToken();

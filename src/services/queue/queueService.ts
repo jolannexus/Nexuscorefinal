@@ -68,13 +68,13 @@ export class QueueService {
              // ... rollback logic as before, just using prisma directly
              // ...
           } catch (rollbackErr: any) {
-             logger.error(`[QueueService] CRITICAL: Failed to rollback exhausted job ${job.id}:`, rollbackErr);
+             logger.error(rollbackErr, `[QueueService] CRITICAL: Failed to rollback exhausted job ${job.id}:`);
           }
         }
       });
 
     } catch (err: any) {
-      logger.error('[QueueService] Failed to establish BullMQ pipelines:', err);
+      logger.error(err, '[QueueService] Failed to establish BullMQ pipelines:');
     }
   }
 
@@ -99,6 +99,12 @@ export class QueueService {
 
   private async processTopupJob(payload: TopupJobPayload): Promise<void> {
     await TopupJobProcessor.process(payload);
+  }
+
+  public async isReady(): Promise<boolean> {
+    if (!this.queue || !this.worker) return false;
+    const redisClient = getRedisClient();
+    return redisClient.status === 'ready';
   }
 
   public async gracefulShutdown(): Promise<void> {

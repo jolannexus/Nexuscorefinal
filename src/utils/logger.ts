@@ -3,6 +3,8 @@
  * Provides standardized JSON logging for production observability (e.g., Datadog, ELK, CloudWatch).
  */
 
+import { logger as pinoLogger } from '../lib/logger';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogContext {
@@ -14,42 +16,24 @@ interface LogContext {
 }
 
 class StructuredLogger {
-  private formatMessage(level: LogLevel, message: string, context?: LogContext, error?: unknown) {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      ...(context && { context }),
-      ...(error instanceof Error && {
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        }
-      })
-    };
-
-    return process.env.NODE_ENV === 'production' 
-      ? JSON.stringify(logEntry) 
-      : `[${logEntry.timestamp}] [${level.toUpperCase()}] ${message} ${context ? JSON.stringify(context) : ''} ${error ? (error as Error).message : ''}`;
-  }
-
   debug(message: string, context?: LogContext) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.debug(this.formatMessage('debug', message, context));
-    }
+    if (context) pinoLogger.debug(context, message);
+    else pinoLogger.debug(message);
   }
 
   info(message: string, context?: LogContext) {
-    console.info(this.formatMessage('info', message, context));
+    if (context) pinoLogger.info(context, message);
+    else pinoLogger.info(message);
   }
 
   warn(message: string, context?: LogContext, error?: unknown) {
-    console.warn(this.formatMessage('warn', message, context, error));
+    if (context || error) pinoLogger.warn({ ...context, err: error }, message);
+    else pinoLogger.warn(message);
   }
 
   error(message: string, error?: unknown, context?: LogContext) {
-    console.error(this.formatMessage('error', message, context, error));
+    if (context || error) pinoLogger.error({ ...context, err: error }, message);
+    else pinoLogger.error(message);
   }
 }
 
