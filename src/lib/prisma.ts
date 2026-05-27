@@ -21,7 +21,7 @@ process.env.DATABASE_URL &&
 const separator = process.env.DATABASE_URL.includes('?') ? '&' : '?'
 
 process.env.DATABASE_URL +=
-"${separator}pgbouncer=true&connection_limit=1"
+`${separator}pgbouncer=true&connection_limit=1`
 }
 
 const globalForPrisma = globalThis as unknown as {
