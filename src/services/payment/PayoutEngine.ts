@@ -7,6 +7,8 @@ import { LedgerEngine, LedgerAccountType } from '../financial/LedgerEngine';
 import { LedgerAuditService } from '../financial/LedgerAuditService';
 import { Prisma } from '@prisma/client';
 
+import { FraudDetectionService } from '../financial/FraudDetectionService';
+
 export class PayoutEngine {
   /**
    * Initiates a secure real-money payout across providers with atomic double-entry ledger bookkeeping
@@ -21,7 +23,7 @@ export class PayoutEngine {
     description: string,
     correlationId: string
   ) {
-    // 1. Payout Anomaly Detection
+    // 1. Payout Anomaly Detection Threshold
     const ANOMALY_THRESHOLD = 50000000; // Limit single payout to 50,000,000 IDR
     if (amount > ANOMALY_THRESHOLD) {
       logger.error(
@@ -33,6 +35,12 @@ export class PayoutEngine {
 
     if (amount <= 0) {
       throw new Error('Payout amount must be positive.');
+    }
+
+    // 1.5 Realtime Velocity & Fraud Check
+    const isSafe = await FraudDetectionService.evaluatePayoutRisk(tenantId, walletId, amount);
+    if (!isSafe) {
+       throw new Error('SECURITY_ALERT: Transaction blocked by anti-fraud velocity policies.');
     }
 
     // 2. Query balance directly
@@ -74,7 +82,7 @@ export class PayoutEngine {
           description,
         };
 
-        const result = await adapter.processPayout(tenantId, payload);
+        const result = await manager.executeWithBreaker(adapter.getName(), () => adapter.processPayout(tenantId, payload));
 
         // Maintain log records
         await LedgerAuditService.logEvent(

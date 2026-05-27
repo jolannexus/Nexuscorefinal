@@ -37,7 +37,7 @@ export const auditQueue = createQueue(QueueName.AUDIT);
 
 // Initialize QueueEvents for monitoring
 export const setupQueueMonitoring = (name: QueueName) => {
-  const events = new QueueEvents(name, { connection: getRedisClient(true) });
+  const events = new QueueEvents(name, { connection: getRedisClient() });
   
   events.on('failed', ({ jobId, failedReason }) => {
     logger.error(`Job ${jobId} failed in ${name}: ${failedReason}`);
@@ -46,4 +46,15 @@ export const setupQueueMonitoring = (name: QueueName) => {
   events.on('completed', ({ jobId }) => {
     logger.info(`Job ${jobId} completed in ${name}`);
   });
+};
+
+export const shutdownQueues = async () => {
+    await Promise.allSettled([
+        transactionQueue.close(),
+        webhookQueue.close(),
+        reconciliationQueue.close(),
+        settlementQueue.close(),
+        payoutQueue.close(),
+        auditQueue.close()
+    ]);
 };

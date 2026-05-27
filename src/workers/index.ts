@@ -8,7 +8,28 @@ import { startPayoutQueueWorker } from './PayoutQueueWorker';
 import { startAuditQueueWorker } from './AuditQueueWorker';
 import { startFinancialIntegrityAuditWorker } from './FinancialIntegrityAuditWorker';
 
+const globalForWorkers = globalThis as unknown as {
+  workers: any[];
+};
+
 export const startAllWorkers = async () => {
+  if (globalForWorkers.workers) {
+    logger.info('Workers already running, skipping initialization (HMR)');
+    return {
+      shutdown: async () => {
+        logger.info('Shutting down background workers gracefully...');
+        for (const instance of globalForWorkers.workers) {
+          try {
+              await instance.close();
+          } catch (err) {
+              logger.error({ err }, 'Error during worker shutdown');
+          }
+        }
+        globalForWorkers.workers = [];
+      }
+    };
+  }
+
   logger.info('Starting background workers...');
   
   const workers = [
@@ -32,6 +53,8 @@ export const startAllWorkers = async () => {
       logger.error({ err }, `Failed to start worker: ${w.name}`);
     }
   }
+
+  globalForWorkers.workers = instances;
   
   const shutdown = async () => {
     logger.info('Shutting down background workers gracefully...');
@@ -42,6 +65,7 @@ export const startAllWorkers = async () => {
             logger.error({ err }, 'Error during worker shutdown');
         }
     }
+    globalForWorkers.workers = [];
   };
 
   return { shutdown };

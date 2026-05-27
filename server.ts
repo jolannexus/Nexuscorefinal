@@ -101,7 +101,19 @@ async function startServer() {
   // Security Headers
   app.use(
     helmet({
-      contentSecurityPolicy: false, // Disabled for Vite Dev Server compatibility
+      contentSecurityPolicy:
+        process.env.NODE_ENV === "production"
+          ? {
+              directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                fontSrc: ["'self'", "https://fonts.gstatic.com"],
+                imgSrc: ["'self'", "data:", "https://*"],
+                connectSrc: ["'self'", "wss:", "https://*"],
+              },
+            }
+          : false, // Disabled for Vite Dev Server compatibility in dev mode
       crossOriginEmbedderPolicy: false,
     }),
   );
@@ -156,31 +168,13 @@ async function startServer() {
           ...branding
         };
       } else {
-        // Fallback mock tenant if database has no records yet
-        (req as any).agency = {
-          id: "nexuscore-default-tenant",
-          name: "NexusCore White-Label Store",
-          slug: "nexuscore",
-          status: "ACTIVE",
-          theme: { primary: '#030712', secondary: '#4B5563', accent: '#3B82F6' },
-          colorMode: "dark",
-          brandingConfig: { logoUrl: "/logo.png" }
-        };
+        return res.status(404).json({ error: "Tenant not found or inactive" });
       }
 
       next();
     } catch (error) {
-      console.warn("[DATABASE_OFFLINE_WARNING] Database connection not found or offline. Using beautiful local mock tenant context fallback.");
-      (req as any).agency = {
-        id: "nexuscore-default-tenant",
-        name: "NexusCore White-Label Store",
-        slug: "nexuscore",
-        status: "ACTIVE",
-        theme: { primary: '#030712', secondary: '#4B5563', accent: '#3B82F6' },
-        colorMode: "dark",
-        brandingConfig: { logoUrl: "/logo.png" }
-      };
-      next();
+      console.error("[DATABASE_OFFLINE_WARNING] Database connection not found or offline:", error);
+      return res.status(503).json({ error: "Service unavailable due to database maintenance" });
     }
   });
 
@@ -690,12 +684,9 @@ async function startServer() {
           });
         }
 
-        // Return fallback lists for visualization/UI testing if database matches are empty
+        // Return empty list if no active suppliers found
         if (healthData.length === 0) {
-          healthData.push(
-            { id: 'df-prod', name: 'Digiflazz Enterprise', status: 'Healthy', latency: 48, load: 12, successRate: 99.4, totalOrders: 1489 },
-            { id: 'vip-prod', name: 'VIP Reseller API', status: 'Healthy', latency: 125, load: 24, successRate: 98.7, totalOrders: 785 }
-          );
+          return res.json({ success: true, healthList: [] });
         }
 
         res.json({ success: true, healthList: healthData });
@@ -777,70 +768,7 @@ async function startServer() {
       });
       
       if (products.length === 0) {
-        // Return pre-seeded mockup lists for White Label SaaS instantly if DB empty
-        const mockups = [
-          {
-            id: "netflix_premium",
-            sku: "NFLX-PREM",
-            name: "Netflix Premium Private Profile (1 Month)",
-            category: "Streaming",
-            basePrice: 28000,
-            sellPrice: 35000,
-            categoryType: "Streaming",
-            isAvailable: true,
-            isEnabled: true,
-            syncedAt: new Date().toISOString()
-          },
-          {
-            id: "spotify_family",
-            sku: "SPOT-FAM",
-            name: "Spotify Individual Premium Plan (1 Month)",
-            category: "Streaming",
-            basePrice: 15000,
-            sellPrice: 22000,
-            categoryType: "Streaming",
-            isAvailable: true,
-            isEnabled: true,
-            syncedAt: new Date().toISOString()
-          },
-          {
-            id: "youtube_premium",
-            sku: "YT-PREM",
-            name: "YouTube Premium Unlocked (1 Month)",
-            category: "Streaming",
-            basePrice: 9000,
-            sellPrice: 15000,
-            categoryType: "Streaming",
-            isAvailable: true,
-            isEnabled: true,
-            syncedAt: new Date().toISOString()
-          },
-          {
-            id: "freefire_diamonds",
-            sku: "FF-140",
-            name: "Free Fire Top-up 140 Diamonds",
-            category: "Game",
-            basePrice: 18000,
-            sellPrice: 20000,
-            categoryType: "Game",
-            isAvailable: true,
-            isEnabled: true,
-            syncedAt: new Date().toISOString()
-          },
-          {
-            id: "mobilelegends_diamonds",
-            sku: "MLBB-257",
-            name: "Mobile Legends Top-up 257 Diamonds",
-            category: "Game",
-            basePrice: 54000,
-            sellPrice: 60000,
-            categoryType: "Game",
-            isAvailable: true,
-            isEnabled: true,
-            syncedAt: new Date().toISOString()
-          }
-        ];
-        return res.json(mockups);
+        return res.json([]);
       }
 
       // Format Prisma outputs to product structures expected by react frontend
@@ -1792,6 +1720,13 @@ async function startServer() {
         
         // 3. Stop queue connections
         await QueueService.getInstance().gracefulShutdown();
+        
+        const { shutdownQueues } = await import('./src/lib/queueManager');
+        await shutdownQueues();
+
+        const { getRedisClient } = await import('./src/lib/redis');
+        await getRedisClient().quit();
+        logger.info("Redis connections safely closed.");
 
         // 4. Close Database
         await prisma.$disconnect();
@@ -1813,6 +1748,7 @@ async function startServer() {
 
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
+  process.on('SIGUSR2', shutdown);
 }
 
 startServer().catch((err) => {

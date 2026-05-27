@@ -27,4 +27,12 @@ export class SupplierRouter {
     logger.info({ bestSupplier, highestScore }, 'Supplier routing decision made');
     return bestSupplier;
   }
+
+  public async executeWithBreaker<T>(supplierId: string, action: () => Promise<T>): Promise<T> {
+    const breaker = this.breakers.get(supplierId);
+    if (!breaker) {
+      throw new Error(`Circuit breaker not initialized for supplier ${supplierId}`);
+    }
+    return breaker.execute(action);
+  }
 }

@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexuscore-api
+  labels:
+    app: nexuscore-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nexuscore-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: nexuscore-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - nexuscore-api
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+      containers:
+      - name: nexuscore-api
+        image: nexuscore/api:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: nexuscore-secrets
+        - configMapRef:
+            name: nexuscore-config
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        volumeMounts:
+        - name: tmp-vol
+          mountPath: /tmp
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+      volumes:
+      - name: tmp-vol
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexuscore-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: nexuscore-api
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexuscore-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+spec:
+  rules:
+  - host: api.nexuscore.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nexuscore-api
+            port:
+              number: 80

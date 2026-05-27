@@ -4,7 +4,6 @@ import { TopupJobPayload, TopupJobProcessor } from './jobProcessor';
 import { logger } from '../../lib/logger';
 
 export class QueueService {
-  private static instance: QueueService;
   private queue: Queue | null = null;
   private worker: Worker | null = null;
 
@@ -13,10 +12,11 @@ export class QueueService {
   }
 
   public static getInstance(): QueueService {
-    if (!QueueService.instance) {
-      QueueService.instance = new QueueService();
+    const globalForQueueService = globalThis as unknown as { queueServiceInstance: QueueService };
+    if (!globalForQueueService.queueServiceInstance) {
+      globalForQueueService.queueServiceInstance = new QueueService();
     }
-    return QueueService.instance;
+    return globalForQueueService.queueServiceInstance;
   }
 
   private initializeQueue() {

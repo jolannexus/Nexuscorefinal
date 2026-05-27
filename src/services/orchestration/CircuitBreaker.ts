@@ -38,4 +38,21 @@ export class CircuitBreaker {
     await getRedisClient().del(`${this.name}:failures`);
     await getRedisClient().set(`${this.name}:state`, BreakerState.CLOSED);
   }
+
+  async execute<T>(action: () => Promise<T>): Promise<T> {
+    const state = await this.getState();
+    
+    if (state === BreakerState.OPEN) {
+      throw new Error(`CircuitBreaker ${this.name} is OPEN - Fast failing`);
+    }
+    
+    try {
+      const result = await action();
+      await this.recordSuccess();
+      return result;
+    } catch (error) {
+      await this.recordFailure();
+      throw error;
+    }
+  }
 }

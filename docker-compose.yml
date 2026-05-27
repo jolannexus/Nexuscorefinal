@@ -33,11 +33,18 @@ services:
           cpus: '0.25'
           memory: 256M
     healthcheck:
-      test: ["CMD-SHELL", "node -e 'fetch(\"http://localhost:3000/health\").then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))'"]
+      test: ["CMD", "/nodejs/bin/node", "-e", "const http = require('http'); http.get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
       interval: 15s
       timeout: 10s
       retries: 3
       start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     networks:
       - nexuscore-net
 

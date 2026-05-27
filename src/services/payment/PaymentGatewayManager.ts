@@ -5,10 +5,12 @@ import { PaymentProviderAdapter } from './PaymentProviderAdapter';
 import { MidtransAdapter } from './adapters/MidtransAdapter';
 import { XenditAdapter } from './adapters/XenditAdapter';
 import { DuitkuAdapter } from './adapters/DuitkuAdapter';
+import { CircuitBreaker, BreakerState } from '../orchestration/CircuitBreaker';
 
 export class PaymentGatewayManager {
   private static instance: PaymentGatewayManager;
   private adapters: Map<'midtrans' | 'xendit' | 'duitku', PaymentProviderAdapter> = new Map();
+  private breakers: Map<string, CircuitBreaker> = new Map();
 
   private constructor() {
     this.registerAdapter(new MidtransAdapter());
@@ -24,7 +26,15 @@ export class PaymentGatewayManager {
   }
 
   private registerAdapter(adapter: PaymentProviderAdapter) {
-    this.adapters.set(adapter.getName(), adapter);
+    const name = adapter.getName();
+    this.adapters.set(name, adapter);
+    this.breakers.set(name, new CircuitBreaker(`pg_${name}`, { failureThreshold: 5, recoveryTimeout: 60000 }));
+  }
+
+  public async executeWithBreaker<T>(providerName: 'midtrans' | 'xendit' | 'duitku', action: () => Promise<T>): Promise<T> {
+    const breaker = this.breakers.get(providerName);
+    if (!breaker) throw new Error(`Breaker for ${providerName} not found`);
+    return breaker.execute(action);
   }
 
   /**
@@ -34,7 +44,8 @@ export class PaymentGatewayManager {
     // 1. If tenant has a manual preference and it's healthy, we use it
     if (preferredProvider) {
       const adapter = this.adapters.get(preferredProvider);
-      if (adapter) {
+      const breaker = this.breakers.get(preferredProvider);
+      if (adapter && breaker && await breaker.getState() === BreakerState.CLOSED) {
         const score = await adapter.getHealthScore(tenantId);
         if (score >= 50) {
           return adapter;
@@ -43,13 +54,20 @@ export class PaymentGatewayManager {
       }
     }
 
-    // 2. Otherwise routing table: select provider with highest health score
+    // 2. Otherwise routing table: select provider with highest health score and CLOSED breaker
     let bestAdapter: PaymentProviderAdapter | null = null;
     let highestScore = -1;
 
     for (const adapter of this.adapters.values()) {
+      const name = adapter.getName();
+      const breaker = this.breakers.get(name);
+      
+      if (breaker && await breaker.getState() === BreakerState.OPEN) {
+         continue; // Skip open breakers
+      }
+
       const score = await adapter.getHealthScore(tenantId);
-      logger.debug({ provider: adapter.getName(), score, tenantId }, 'Checking health score for routing');
+      logger.debug({ provider: name, score, tenantId }, 'Checking health score for routing');
       if (score > highestScore) {
         highestScore = score;
         bestAdapter = adapter;
@@ -57,7 +75,7 @@ export class PaymentGatewayManager {
     }
 
     if (!bestAdapter) {
-      // absolute safe fallback
+      // absolute safe fallback if all breakers are struggling
       bestAdapter = this.adapters.get('xendit') || this.adapters.get('midtrans')!;
     }
 

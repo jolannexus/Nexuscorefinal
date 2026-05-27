@@ -19,6 +19,6 @@ export const startPayoutQueueWorker = () => {
         throw err;
       }
     },
-    { connection: getRedisClient(true), concurrency: 5 }
+    { connection: getRedisClient(), concurrency: 5 }
   );
 };

@@ -43,7 +43,7 @@ export const startLedgerSettlementWorker = () => {
       }
     },
     { 
-      connection: getRedisClient(true),
+      connection: getRedisClient(),
       concurrency: 50,
       limiter: {
         max: 500,

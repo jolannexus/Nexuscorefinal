@@ -6,14 +6,21 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/nexuscore?schema=public&sslmode=prefer';
 }
 
-const globalForPrisma = global as unknown as { prisma: any };
+if (!process.env.DIRECT_URL) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL; // Fallback
+}
 
-const basePrisma = new PrismaClient({
+// Optimize Supabase PostgreSQL integration for PgBouncer
+if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("pgbouncer=true")) {
+  const separator = process.env.DATABASE_URL.includes("?") ? "&" : "?";
+  process.env.DATABASE_URL += `${separator}pgbouncer=true&connection_limit=1`;
+}
+
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+export const prisma = (globalForPrisma.prisma || new PrismaClient({
   log: [], // Suppress connection connection errors in console logs for sandbox environment
-});
-
-// Implement strict engine-level immutability for financial journals & entries
-export const prisma = (globalForPrisma.prisma || basePrisma).$extends({
+})).$extends({
   query: {
     async $allOperations({ operation, model, args, query }) {
       const start = Date.now();

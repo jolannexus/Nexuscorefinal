@@ -7,8 +7,8 @@ export class LedgerAuditService {
   /**
    * Generates a deterministic SHA256 signature for a financial event.
    */
-  static generateFingerprint(tenantId: string, action: string, details: string, createdAt: Date): string {
-    const data = `${tenantId}|${action}|${details}|${createdAt.toISOString()}`;
+  static generateFingerprint(tenantId: string, action: string, details: string, createdAt: Date, previousFingerprint: string | null): string {
+    const data = `${tenantId}|${action}|${details}|${createdAt.toISOString()}|${previousFingerprint || 'GENESIS'}`;
     return crypto.createHash('sha256').update(data).digest('hex');
   }
 
@@ -24,7 +24,16 @@ export class LedgerAuditService {
     correlationId?: string
   ) {
     const createdAt = new Date();
-    const fingerprint = this.generateFingerprint(tenantId, action, details, createdAt);
+
+    // Fetch the structural Previous Fingerprint (most recent for tenant)
+    const latestLog = await tx.financialAuditLog.findFirst({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+      select: { fingerprint: true },
+    });
+
+    const previousFingerprint = latestLog?.fingerprint || null;
+    const fingerprint = this.generateFingerprint(tenantId, action, details, createdAt, previousFingerprint);
 
     return await tx.financialAuditLog.create({
       data: {
@@ -51,18 +60,21 @@ export class LedgerAuditService {
     });
 
     const corruptLogIds: string[] = [];
+    let previousFingerprint: string | null = null;
 
     for (const log of logs) {
       const calculatedFingerprint = this.generateFingerprint(
         log.tenantId,
         log.action,
         log.details,
-        log.createdAt
+        log.createdAt,
+        previousFingerprint
       );
 
       if (log.fingerprint !== calculatedFingerprint) {
         corruptLogIds.push(log.id);
       }
+      previousFingerprint = log.fingerprint;
     }
 
     return {

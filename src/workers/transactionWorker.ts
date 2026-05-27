@@ -16,7 +16,7 @@ export const startTransactionWorker = () => {
       return { status: 'completed' };
     },
     { 
-        connection: getRedisClient(true),
+        connection: getRedisClient(),
         concurrency: 5 
     }
   );

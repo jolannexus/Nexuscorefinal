@@ -2,15 +2,19 @@ import Redis from 'ioredis';
 import { env } from './env';
 import { logger } from './logger';
 
-let client: Redis | null = null;
+const globalForRedis = globalThis as unknown as { redisClient: Redis };
 
-export function getRedisClient(forceNew = false): Redis {
+export function getRedisClient(): Redis {
+  if (globalForRedis.redisClient) {
+    return globalForRedis.redisClient;
+  }
+
   const redisConfig: any = {
     maxRetriesPerRequest: null,
-    enableReadyCheck: true,
+    enableReadyCheck: false,
+    lazyConnect: true,
     enableOfflineQueue: true,
     retryStrategy: (times: number) => {
-      // Linear-exponential backoff: retry and cap at 3000ms delay
       const delay = Math.min(times * 200, 3000);
       return delay;
     }
@@ -18,21 +22,18 @@ export function getRedisClient(forceNew = false): Redis {
 
   const url = env.REDIS_URL;
 
-  if (forceNew) {
-    return new Redis(url, redisConfig);
-  }
+  const client = new Redis(url, redisConfig);
 
-  if (!client) {
-    client = new Redis(url, redisConfig);
+  client.on('error', (err) => {
+    logger.error(err, 'Redis connection error');
+  });
 
-    client.on('error', (err) => {
-      logger.error(err, 'Redis connection error');
-    });
+  client.on('connect', () => {
+    logger.info('Redis connected succesfully');
+  });
 
-    client.on('connect', () => {
-      logger.info('Redis connected succesfully');
-    });
-  }
+  globalForRedis.redisClient = client;
+
   return client;
 }
 

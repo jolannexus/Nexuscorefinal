@@ -73,6 +73,8 @@ export const requireTenant = (req: AuthenticatedRequest, res: Response, next: Ne
   next();
 };
 
+import { RBAC, Permission } from '../lib/rbac';
+
 // 3. Role Middleware
 export const requireRole = (allowedRoles: string[]) => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -104,6 +106,29 @@ export const requireRole = (allowedRoles: string[]) => {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   };
+};
+
+// 3.5. Permission Middleware (RBAC)
+export const requirePermission = (permission: Permission) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Use user token role for quick check, or DB for strict check.
+      const hasPerm = RBAC.hasPermission(req.user.role, permission);
+      
+      if (!hasPerm) {
+        return res.status(403).json({ error: `Forbidden: Missing required permission ${permission}` });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Permission verification failed:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
 };
 
 

@@ -5,7 +5,7 @@ import { workerLogger } from '../lib/logger';
 import { QueueName } from '../lib/queueManager';
 
 export const startQueueTelemetryWorker = () => {
-  const connection = getRedisClient(true);
+  const connection = getRedisClient();
   const queues = [
     new Queue(QueueName.TRANSACTION_PROCESSING, { connection }),
     new Queue(QueueName.WEBHOOK_DELIVERY, { connection }),
