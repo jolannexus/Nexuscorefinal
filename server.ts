@@ -1,4 +1,5 @@
 import express from "express";
+import * as Sentry from "@sentry/node";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
@@ -37,8 +38,37 @@ import { QRISService } from "./src/services/payment/QRISService";
 import { VirtualAccountService } from "./src/services/payment/VirtualAccountService";
 import { globalApiLimiter } from "./src/middleware/rateLimit";
 import { register } from "./src/lib/metrics";
+import { eventDispatcher } from "./src/events/EventDispatcher";
+import { DomainEvent } from "./src/events/types";
 
 async function startServer() {
+  const serverSentryDsn = process.env.SENTRY_DSN || "";
+  if (serverSentryDsn) {
+    Sentry.init({
+      dsn: serverSentryDsn,
+      environment: process.env.NODE_ENV || "development",
+      tracesSampleRate: 1.0,
+    });
+  }
+
+  // Register process-level handlers to automatically capture unhandled rejections/exceptions
+  process.on("uncaughtException", (err) => {
+    logger.error(err, "Uncaught Exception in server process");
+    if (serverSentryDsn) {
+      Sentry.captureException(err);
+    }
+    setTimeout(() => {
+      process.exit(1);
+    }, 1000);
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    logger.error({ reason }, "Unhandled Rejection in server process");
+    if (serverSentryDsn) {
+      Sentry.captureException(reason);
+    }
+  });
+
   const app = express();
   app.set("trust proxy", 1); // Trust first proxy for rate limiting (X-Forwarded-For)
   const PORT = env.PORT;
@@ -162,6 +192,54 @@ async function startServer() {
       status: "NexusCore Platform Online",
       timestamp: new Date().toISOString(),
       database: "PostgreSQL Connected"
+    });
+  });
+
+  // Real-time Event Stream (SSE)
+  const sseClients = new Set<express.Response>();
+
+  // Subscribe to core system-level events to send to subscribers
+  eventDispatcher.subscribe(DomainEvent.SUPPLIER_FAILED, (payload: any) => {
+    logger.info({ payload }, "SSE broadcasting SUPPLIER_FAILED to clients");
+    const data = JSON.stringify({
+      event: "SUPPLIER_FAILED",
+      payload,
+    });
+    sseClients.forEach((client) => {
+      try {
+        client.write(`data: ${data}\n\n`);
+      } catch (writeErr) {
+        logger.error({ writeErr }, "Failed to write to SSE client");
+        sseClients.delete(client);
+      }
+    });
+  });
+
+  app.get("/api/events/stream", (req, res) => {
+    // Enable Server-Sent Events headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders(); // Establishes SSE stream connection
+
+    // Send initial handshake connect notice
+    res.write("data: " + JSON.stringify({ event: "CONNECTED", timestamp: new Date().toISOString() }) + "\n\n");
+
+    sseClients.add(res);
+
+    // Keep connection alive with periodic pings every 30 seconds
+    const pingInterval = setInterval(() => {
+      try {
+        res.write("data: " + JSON.stringify({ event: "PING" }) + "\n\n");
+      } catch (err) {
+        clearInterval(pingInterval);
+        sseClients.delete(res);
+      }
+    }, 30000);
+
+    req.on("close", () => {
+      clearInterval(pingInterval);
+      sseClients.delete(res);
     });
   });
 
@@ -1602,6 +1680,28 @@ async function startServer() {
     }
   );
 
+  // Global Express Error Handler Middleware with Sentry Integration
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    logger.error({ err, correlationId: (req as any).correlationId }, "Unhandled express error in routes");
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(err, {
+        extra: {
+          correlationId: (req as any).correlationId,
+          url: req.url,
+          method: req.method,
+          body: req.body,
+          query: req.query,
+          params: req.params,
+        }
+      });
+    }
+    res.status(500).json({
+      error: "Internal Server Error",
+      correlationId: (req as any).correlationId,
+      message: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  });
+
   // Enterprise Health Checks
   app.get("/health", async (req, res) => {
     res.json({ status: "up", timestamp: new Date(), version: "1.0.0" });
@@ -1715,4 +1815,9 @@ async function startServer() {
   process.on('SIGINT', shutdown);
 }
 
-startServer();
+startServer().catch((err) => {
+  logger.error(err, "CRITICAL: Server failed to start up gracefully");
+  setTimeout(() => {
+    process.exit(1);
+  }, 1000);
+});

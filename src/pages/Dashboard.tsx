@@ -124,6 +124,91 @@ export const Dashboard = () => {
     // API mutation goes here
   };
 
+  const [failures, setFailures] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    const eventSource = new EventSource('/api/events/stream');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === 'SUPPLIER_FAILED') {
+          const payload = data.payload;
+          const newFailure = {
+            id: Math.random().toString(36).substring(2, 11),
+            orderId: payload.orderId || '',
+            tenantId: payload.tenantId || '',
+            supplierName: payload.supplierName || 'Unknown Partner',
+            reason: payload.reason || 'Operational failure detected',
+            timestamp: payload.timestamp || new Date().toISOString()
+          };
+
+          setFailures(prev => [newFailure, ...prev]);
+
+          // Automatically clear this notification after 10 seconds
+          setTimeout(() => {
+            setFailures(prev => prev.filter(f => f.id !== newFailure.id));
+          }, 10000);
+        }
+      } catch (err) {
+        console.error('Error parsing SSE event in Dashboard:', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.warn('Real-time notification stream error (retrying):', err);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  const renderToasts = () => (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3.5 max-w-md w-full pointer-events-none">
+      <AnimatePresence>
+        {failures.map((failure) => (
+          <motion.div
+            key={failure.id}
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
+            className="pointer-events-auto bg-slate-950/95 border border-red-500/20 hover:border-red-500/40 rounded-2xl p-5 shadow-[0_12px_40px_rgba(239,68,68,0.15)] flex gap-4 transition-all"
+          >
+            <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+              <AlertCircle className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-red-400 uppercase tracking-widest">
+                  Supplier Failed &bull; Routing
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setFailures(prev => prev.filter(f => f.id !== failure.id))}
+                  className="text-slate-500 hover:text-slate-300 text-xs font-medium cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <p className="text-[14px] font-bold text-white tracking-tight mt-1">
+                Failover Tripped: {failure.supplierName}
+              </p>
+              <p className="text-xs text-slate-400 leading-normal font-medium max-h-16 overflow-y-auto mt-0.5">
+                Reason: {failure.reason}
+              </p>
+              <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-white/5 text-[10px] text-slate-500 font-semibold tracking-wider uppercase">
+                <span className="text-amber-400">⚡ ACTIVE FAILOVER DEPLOYED</span>
+                <span>&bull;</span>
+                <span>Ref: {failure.orderId?.slice(0, 8)}</span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+
   if (role === 'AGENCY_SUPPLIER_ADMIN') {
     return (
       <motion.div 
@@ -309,6 +394,7 @@ export const Dashboard = () => {
             </Card>
           </div>
         </div>
+        {renderToasts()}
       </motion.div>
     );
   }
@@ -548,6 +634,7 @@ export const Dashboard = () => {
             />
           )}
         </AnimatePresence>
+        {renderToasts()}
       </motion.div>
     );
   }
@@ -721,6 +808,7 @@ export const Dashboard = () => {
              </div>
           </Card>
         </div>
+        {renderToasts()}
       </motion.div>
     </motion.div>
   );

@@ -4,6 +4,8 @@ import { prisma } from '../../lib/prisma';
 import { supplierRegistry } from '../../adapters/suppliers/registry';
 import { metrics } from '../../utils/metrics';
 import { logger } from '../../utils/logger';
+import { eventDispatcher } from '../../events/EventDispatcher';
+import { DomainEvent } from '../../events/types';
 
 export interface ProviderTelemetry {
   supplierName: string;
@@ -426,6 +428,19 @@ export class ProviderSelector {
 
         // 4. Failed provider temporarily quarantined (duration: 3 minutes)
         this.quarantineProvider(agencyId, connection.supplierName, 3 * 60 * 1000);
+
+        // Dispatch SUPPLIER_FAILED domain event in real-time
+        try {
+          eventDispatcher.dispatch(DomainEvent.SUPPLIER_FAILED, {
+            orderId: order.id,
+            tenantId: agencyId,
+            supplierName: connection.supplierName,
+            reason: errorMsg,
+            timestamp: new Date().toISOString()
+          });
+        } catch (dispatchErr) {
+          console.error('[ProviderSelector] Failed to dispatch SUPPLIER_FAILED event:', dispatchErr);
+        }
 
         attemptsLog.push({
           supplierName: connection.supplierName,

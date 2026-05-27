@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 
 interface Props {
   children: ReactNode;
@@ -19,6 +20,10 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
+    const sentryDsn = (import.meta as any).env?.VITE_SENTRY_DSN;
+    if (sentryDsn) {
+      Sentry.captureException(error, { extra: { errorInfo } });
+    }
   }
 
   public render() {
