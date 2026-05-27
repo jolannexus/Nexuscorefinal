@@ -107,9 +107,9 @@ const TeamManagement = safeLazy(() => import(`./pages/TeamManagement`));
 const DevSettings = safeLazy(() => import(`./pages/DevSettings`));
 const TransactionHistoryPage = safeLazy(() => import(`./pages/billing/TransactionHistory`).then(m => ({ default: m.TransactionHistoryPage })));
 const DepositSystemPage = safeLazy(() => import(`./pages/billing/DepositSystem`).then(m => ({ default: m.DepositSystemPage })));
-const Login = safeLazy(() => import(`./pages/auth/Login`).then(m => ({ default: m.Login })));
-const Register = safeLazy(() => import(`./pages/auth/Register`).then(m => ({ default: m.Register })));
-const ForgotPassword = safeLazy(() => import(`./pages/auth/ForgotPassword`).then(m => ({ default: m.ForgotPassword })));
+const Login = safeLazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
+const Register = safeLazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })));
+const ForgotPassword = safeLazy(() => import('./pages/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const Landing = safeLazy(() => import(`./pages/Landing`).then(m => ({ default: m.Landing })));
 const OnboardingFlow = safeLazy(() => import(`./pages/onboarding/OnboardingFlow`).then(m => ({ default: m.OnboardingFlow })));
 const PublicStore = safeLazy(() => import('./pages/PublicStore').then(m => ({ default: m.PublicStore })));
@@ -205,7 +205,7 @@ const AppRoutes = () => {
       <Route
         path="/suppliers"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_SUPPLIER_ADMIN', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <Suppliers />
             </DashboardLayout>
@@ -216,7 +216,7 @@ const AppRoutes = () => {
       <Route
         path="/resellers"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <ResellersPage />
             </DashboardLayout>
@@ -227,7 +227,7 @@ const AppRoutes = () => {
       <Route
         path="/services"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <ServicesPage />
             </DashboardLayout>
@@ -238,7 +238,7 @@ const AppRoutes = () => {
       <Route
         path="/catalog"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <ProductDashboard />
             </DashboardLayout>
@@ -249,7 +249,7 @@ const AppRoutes = () => {
       <Route
         path="/streaming"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <StreamingDatabase />
             </DashboardLayout>
@@ -260,7 +260,7 @@ const AppRoutes = () => {
       <Route
         path="/games"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <GameDatabase />
             </DashboardLayout>
@@ -271,7 +271,7 @@ const AppRoutes = () => {
       <Route
         path="/team"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <TeamManagement />
             </DashboardLayout>
@@ -282,7 +282,7 @@ const AppRoutes = () => {
       <Route
         path="/developer"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <DevSettings />
             </DashboardLayout>
@@ -326,7 +326,7 @@ const AppRoutes = () => {
       <Route
         path="/branding"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <BrandingSettings />
             </DashboardLayout>
@@ -337,7 +337,7 @@ const AppRoutes = () => {
       <Route
         path="/payments"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <PaymentSettings />
             </DashboardLayout>
@@ -348,7 +348,7 @@ const AppRoutes = () => {
       <Route
         path="/marketing"
         element={
-          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY']}>
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENCY', 'AGENCY_ADMIN']}>
             <DashboardLayout>
               <MarketingPage />
             </DashboardLayout>

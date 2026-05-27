@@ -66,9 +66,9 @@ export const Header = () => {
   const navItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
     { label: 'Transactions', path: '/history', icon: Activity },
-    { label: 'Providers', path: '/suppliers', icon: Cpu, roles: ['SUPER_ADMIN', 'AGENCY'] },
-    { label: 'Resellers', path: '/resellers', icon: Users, roles: ['SUPER_ADMIN', 'AGENCY'] },
-    { label: 'Products', path: '/catalog', icon: Package, roles: ['SUPER_ADMIN', 'AGENCY'] },
+    { label: 'Providers', path: '/suppliers', icon: Cpu, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN', 'AGENCY_SUPPLIER_ADMIN'] },
+    { label: 'Resellers', path: '/resellers', icon: Users, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
+    { label: 'Products', path: '/catalog', icon: Package, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
     { label: 'Settings', path: '/system', icon: Settings, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
     { label: 'Ops Desk', path: '/operations', icon: Terminal, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
   ];

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { motion, AnimatePresence } from 'motion/react';
+import { WebhookLogsTable } from '../components/WebhookLogsTable';
 
 interface TestStep {
   id: string;
@@ -483,38 +484,7 @@ export const OperationsCenter = () => {
 
       {activeTab === 'webhooks' && (
         <Card title="Tenant Webhooks Subscriptions Hub" subtitle="Real-time delivery logs, retry queues, and replay protection verification">
-          <div className="overflow-x-auto border border-white/5 rounded-xl mt-6">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-white/5 text-[9px] font-semibold text-slate-400 uppercase tracking-wider border-b border-white/5">
-                  <th className="py-2.5 px-3">Subscriber URL</th>
-                  <th className="py-2.5 px-3">Events Configured</th>
-                  <th className="py-2.5 px-3 text-right">Average Latency</th>
-                  <th className="py-2.5 px-3 text-right">Reliability Rating</th>
-                  <th className="py-2.5 px-3 text-center">Security Hash Verification</th>
-                </tr>
-              </thead>
-              <tbody>
-                {webhookSubscribers.map((hook) => (
-                  <tr key={hook.id} className="border-b border-white/5 hover:bg-white/5 text-[10px]">
-                    <td className="py-3 px-3 font-mono text-slate-200">{hook.url}</td>
-                    <td className="py-3 px-3">
-                      <div className="flex gap-1">
-                        {hook.events.map(ev => (
-                          <span key={ev} className="bg-white/5 px-2 py-0.5 text-[8px] text-slate-400 border border-white/10 rounded font-semibold font-mono">{ev}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-slate-300">{hook.latency}</td>
-                    <td className="py-3 px-3 text-right font-mono text-emerald-400 font-bold">{hook.reliability}</td>
-                    <td className="py-3 px-3 text-center">
-                      <span className="bg-emerald-950/20 text-emerald-400 border border-emerald-900/40 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">HMAC-SHA256</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <WebhookLogsTable />
         </Card>
       )}
 

@@ -1,4 +1,3 @@
-import "./src/lib/tracing";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -8,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import { env } from "./src/lib/env";
 import { logger } from "./src/lib/logger";
+import { startTracing } from "./src/lib/tracing";
 import { startAllWorkers } from "./src/workers";
 import { SupplierFactory } from "./src/services/suppliers/supplierFactory";
 import { prisma } from "./src/lib/prisma";
@@ -20,16 +20,22 @@ import { QueueService } from "./src/services/queue/queueService";
 import {
   requireAuth,
   requireTenant,
-  requireRole,
   verifyWebhookSignature,
   generateToken,
   verifyToken,
 } from "./src/middleware/auth";
+import { requirePermission } from "./src/middleware/requirePermission";
 import { idempotencyMiddleware } from "./src/middleware/idempotency";
 import crypto from "crypto";
 import { TenantCacheService } from "./src/services/tenant/TenantCacheService";
 import { LedgerEngine, LedgerAccountType } from "./src/services/financial/LedgerEngine";
 
+import { ReconciliationService } from "./src/services/billing/reconciliationService";
+import { WebhookService } from "./src/services/suppliers/webhookService";
+import { BalanceManager } from "./src/services/financial/BalanceManager";
+import { QRISService } from "./src/services/payment/QRISService";
+import { VirtualAccountService } from "./src/services/payment/VirtualAccountService";
+import { globalApiLimiter } from "./src/middleware/rateLimit";
 import { register } from "./src/lib/metrics";
 
 async function startServer() {
@@ -70,11 +76,8 @@ async function startServer() {
     }),
   );
 
-  // Rate Limiting (API Protection)
-  const { globalApiLimiter } = await import("./src/middleware/rateLimit");
+  // No import here
   app.use("/api", globalApiLimiter);
-
-  // Body parser
   app.use(express.json({
     verify: (req: any, res, buf) => {
       req.rawBody = buf.toString(); // For exact HMAC signature checks
@@ -172,7 +175,7 @@ async function startServer() {
   });
 
   // Branding update
-  app.put("/api/tenants/:id/branding", requireAuth, requireTenant, requireRole(["SUPER_ADMIN", "AGENCY"]), async (req, res) => {
+  app.put("/api/tenants/:id/branding", requireAuth, requireTenant, requirePermission('tenant.settings.update'), async (req, res) => {
     try {
       const { id } = req.params;
       const branding = req.body;
@@ -188,7 +191,7 @@ async function startServer() {
   });
 
   // Payment settings update
-  app.put("/api/tenants/:id/payment", requireAuth, requireTenant, requireRole(["SUPER_ADMIN", "AGENCY"]), async (req, res) => {
+  app.put("/api/tenants/:id/payment", requireAuth, requireTenant, requirePermission('tenant.settings.update'), async (req, res) => {
     try {
       const { id } = req.params;
       const settings = req.body;
@@ -221,7 +224,7 @@ async function startServer() {
       let assignedRole = "RESELLER";
       if (email === "jolan01feb@gmail.com" || email.includes("admin")) {
         assignedRole = "SUPER_ADMIN";
-      } else if (role === "AGENCY" || role === "SUPER_ADMIN" || role === "RESELLER") {
+      } else if (["AGENCY", "AGENCY_ADMIN", "AGENCY_SUPPLIER_ADMIN", "RESELLER", "RESELLER_MANAGER", "CUSTOMER", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(role)) {
         assignedRole = role;
       }
 
@@ -404,7 +407,7 @@ async function startServer() {
     "/api/suppliers",
     requireAuth,
     requireTenant,
-    requireRole(["SUPER_ADMIN", "AGENCY"]),
+    requirePermission('supplier.manage'),
     async (req, res) => {
       const { id, supplierName, status, credentials } = req.body;
       if (!supplierName) {
@@ -449,7 +452,7 @@ async function startServer() {
     "/api/suppliers/:id",
     requireAuth,
     requireTenant,
-    requireRole(["SUPER_ADMIN", "AGENCY"]),
+    requirePermission('supplier.manage'),
     async (req, res) => {
       try {
         await prisma.supplier.delete({
@@ -468,7 +471,7 @@ async function startServer() {
     "/api/suppliers/validate",
     requireAuth,
     requireTenant,
-    requireRole(["SUPER_ADMIN", "AGENCY"]),
+    requirePermission('supplier.manage'),
     async (req, res) => {
       const { supplierName, credentials } = req.body;
       if (!supplierName || !credentials)
@@ -492,7 +495,7 @@ async function startServer() {
     "/api/suppliers/fetch-balance",
     requireAuth,
     requireTenant,
-    requireRole(["SUPER_ADMIN", "AGENCY"]),
+    requirePermission('supplier.manage'),
     async (req, res) => {
       const { supplierName, credentials } = req.body;
       if (!supplierName || !credentials) {
@@ -531,7 +534,7 @@ async function startServer() {
     "/api/suppliers/fetch-products",
     requireAuth,
     requireTenant,
-    requireRole(["SUPER_ADMIN", "AGENCY"]),
+    requirePermission('supplier.manage'),
     async (req, res) => {
       const { supplierName, credentials } = req.body;
       if (!supplierName || !credentials) {
@@ -630,12 +633,11 @@ async function startServer() {
     "/api/reconciliation/run",
     requireAuth,
     requireTenant,
-    requireRole(["SUPER_ADMIN", "AGENCY"]),
+    requirePermission('ledger.audit'),
     async (req, res) => {
       const agencyId = (req as any).tenantId;
       const { autoHeal } = req.body;
       try {
-        const { ReconciliationService } = await import("./src/services/billing/reconciliationService");
         const report = await ReconciliationService.runReconciliation(agencyId, !!autoHeal);
         res.json({ success: true, report });
       } catch (error: any) {
@@ -644,6 +646,50 @@ async function startServer() {
       }
     }
   );
+
+  // Financial Integrity Alerts API
+  app.get(
+    "/api/financial/integrity/alerts",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const drifts = await prisma.reconciliationDrift.findMany({
+          where: { status: 'UNRESOLVED' },
+          orderBy: { detectedAt: 'desc' },
+          take: 5
+        });
+        res.json({ success: true, alerts: drifts });
+      } catch (err: any) {
+        console.error("Failed to fetch alerts:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // Webhook Hub Diagnostic API
+  app.get("/api/webhooks/logs", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const logs = await prisma.webhookDeliveryLog.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+        take: 20
+      });
+      res.json({ success: true, logs });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/webhooks/replay/:id", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const result = await WebhookService.replayWebhook(req.params.id, tenantId);
+      res.json({ success: true, result });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   // Products Database API (PostgreSQL-backed)
   app.get("/api/products", requireAuth, requireTenant, async (req, res) => {
@@ -778,7 +824,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/resellers", requireAuth, requireTenant, requireRole(["SUPER_ADMIN", "AGENCY"]), async (req, res) => {
+  app.post("/api/resellers", requireAuth, requireTenant, requirePermission('reseller.create'), async (req, res) => {
     const { name, email, balance } = req.body;
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
@@ -857,7 +903,7 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/resellers/:id", requireAuth, requireTenant, requireRole(["SUPER_ADMIN", "AGENCY"]), async (req, res) => {
+  app.delete("/api/resellers/:id", requireAuth, requireTenant, requirePermission('reseller.create'), async (req, res) => {
     try {
       await prisma.user.delete({
         where: { id: req.params.id }
@@ -874,7 +920,7 @@ async function startServer() {
     "/api/reconciliation/ledger",
     requireAuth,
     requireTenant,
-    requireRole(["SUPER_ADMIN", "AGENCY"]),
+    requirePermission('ledger.audit'),
     async (req, res) => {
       const agencyId = (req as any).tenantId;
       try {
@@ -1114,7 +1160,6 @@ async function startServer() {
     requireAuth,
     async (req, res) => {
       try {
-        const { BalanceManager } = await import("./src/services/financial/BalanceManager");
         const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
         const { walletId, amount, idempotencyKey, description } = req.body;
 
@@ -1143,7 +1188,6 @@ async function startServer() {
     requireAuth,
     async (req, res) => {
       try {
-        const { BalanceManager } = await import("./src/services/financial/BalanceManager");
         const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
         const { walletId, amount, idempotencyKey, description } = req.body;
 
@@ -1166,6 +1210,294 @@ async function startServer() {
       }
     }
   );
+
+  // --- ENTERPRISE PAYMENT RAILS ENDPOINTS ---
+  app.post(
+    "/api/payment/deposit/qris",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, amount, customerName, customerEmail, preferredProvider } = req.body;
+
+        if (!walletId || !amount || !customerName || !customerEmail) {
+          return res.status(400).json({ error: "walletId, amount, customerName, and customerEmail are required" });
+        }
+
+        const result = await QRISService.generateDepositQR(
+          tenantId,
+          walletId,
+          parseFloat(amount),
+          customerName,
+          customerEmail,
+          preferredProvider
+        );
+
+        res.json({ success: true, ...result });
+      } catch (err: any) {
+        logger.error({ err }, "QRIS payment creation failed");
+        res.status(500).json({ error: err.message || "QRIS generation failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/payment/deposit/va",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, amount, bankCode, customerName, customerEmail, preferredProvider } = req.body;
+
+        if (!walletId || !amount || !bankCode || !customerName || !customerEmail) {
+          return res.status(400).json({ error: "walletId, amount, bankCode, customerName, and customerEmail are required" });
+        }
+
+        const result = await VirtualAccountService.generateDepositVA(
+          tenantId,
+          walletId,
+          parseFloat(amount),
+          bankCode,
+          customerName,
+          customerEmail,
+          preferredProvider
+        );
+
+        res.json({ success: true, ...result });
+      } catch (err: any) {
+        logger.error({ err }, "VA payment creation failed");
+        res.status(500).json({ error: err.message || "VA generation failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/payment/deposit/ewallet",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { EWalletService } = await import("./src/services/payment/EWalletService");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, amount, walletProvider, phoneNumber, callbackUrl, preferredProvider } = req.body;
+
+        if (!walletId || !amount || !walletProvider || !phoneNumber) {
+          return res.status(400).json({ error: "walletId, amount, walletProvider, and phoneNumber are required" });
+        }
+
+        const result = await EWalletService.chargeDepositEWallet(
+          tenantId,
+          walletId,
+          parseFloat(amount),
+          walletProvider,
+          phoneNumber,
+          callbackUrl,
+          preferredProvider
+        );
+
+        res.json({ success: true, ...result });
+      } catch (err: any) {
+        logger.error({ err }, "EWallet charge invocation failed");
+        res.status(500).json({ error: err.message || "EWallet charge failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/payment/withdrawal",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { WithdrawalService } = await import("./src/services/payment/WithdrawalService");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { walletId, amount, bankCode, accountNumber, accountName, description } = req.body;
+
+        if (!walletId || !amount || !bankCode || !accountNumber || !accountName) {
+          return res.status(400).json({ error: "walletId, amount, bankCode, accountNumber, and accountName are required" });
+        }
+
+        const result = await WithdrawalService.requestWithdrawal(
+          tenantId,
+          walletId,
+          parseFloat(amount),
+          bankCode,
+          accountNumber,
+          accountName,
+          description || "Withdrawal payout"
+        );
+
+        res.json({ success: true, ...result });
+      } catch (err: any) {
+        logger.error({ err }, "Withdrawal request processing failed");
+        res.status(500).json({ error: err.message || "Withdrawal payout processing failed" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/payment/refund",
+    requireAuth,
+    requirePermission('refund.execute'),
+    async (req, res) => {
+      try {
+        const { RefundEngine } = await import("./src/services/payment/RefundEngine");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { transactionId, amount, reason, idempotencyKey } = req.body;
+
+        if (!transactionId || !amount || !reason || !idempotencyKey) {
+          return res.status(400).json({ error: "transactionId, amount, reason, and idempotencyKey are required" });
+        }
+
+        const result = await RefundEngine.processRefund(
+          tenantId,
+          transactionId,
+          parseFloat(amount),
+          reason,
+          idempotencyKey
+        );
+
+        res.json({ success: true, ...result });
+      } catch (err: any) {
+        logger.error({ err }, "Refund processing failed");
+        res.status(500).json({ error: err.message || "Refund processing failed" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/payment/deposit/sync/:id",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { QRISService } = await import("./src/services/payment/QRISService");
+        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const { id } = req.params;
+
+        const currentStatus = await QRISService.syncQRISPaymentStatus(tenantId, id);
+        res.json({ success: true, status: currentStatus });
+      } catch (err: any) {
+        logger.error({ err }, "State synchronization failed");
+        res.status(500).json({ error: err.message || "Status sync failed" });
+      }
+    }
+  );
+
+  // --- HIGH SECURITY REAL-MONEY WEBHOOK HANDLER ---
+  app.post(
+    "/api/webhooks/payment/:provider",
+    async (req, res) => {
+      const { provider } = req.params;
+      const providerKey = provider.toLowerCase();
+
+      if (providerKey !== 'midtrans' && providerKey !== 'xendit' && providerKey !== 'duitku') {
+        return res.status(400).json({ error: "Unsupported callback provider" });
+      }
+
+      try {
+        // Trace depositId from payload details dynamically
+        const body = req.body || {};
+        let depositId = '';
+
+        if (providerKey === 'midtrans') {
+          depositId = body.order_id;
+        } else if (providerKey === 'xendit') {
+          depositId = body.external_id || body.reference_id || (body.qr_code && body.qr_code.external_id);
+        } else if (providerKey === 'duitku') {
+          depositId = body.merchantOrderId;
+        }
+
+        if (!depositId) {
+          logger.warn({ providerKey, body }, "Callback rejected due to missing order reference parameters");
+          return res.status(400).json({ error: "Missing order transaction identification tag" });
+        }
+
+        const deposit = await prisma.deposit.findUnique({
+          where: { id: depositId },
+          include: { wallet: true },
+        });
+
+        if (!deposit) {
+          logger.error({ depositId, providerKey }, "Payment callback reference matches no database records");
+          return res.status(404).json({ error: "Deposit transaction record not found" });
+        }
+
+        const tenantId = deposit.wallet.tenantId || "nexuscore-default-tenant";
+
+        // Invoke cryptographic verification checks
+        const { PaymentGatewayManager } = await import("./src/services/payment/PaymentGatewayManager");
+        const manager = PaymentGatewayManager.getInstance();
+        const adapter = manager.getAdapter(providerKey as any);
+
+        const verifyResult = await adapter.verifyWebhook(tenantId, {
+          headers: req.headers,
+          body: req.body,
+        });
+
+        if (!verifyResult.isValid) {
+          logger.error({ depositId, tenantId, providerKey }, "CRITICAL Webhook Validation FAILED! Signature key error.");
+          return res.status(401).json({ error: "Invalid cryptographic signature validation" });
+        }
+
+        // Prevent dual processing updates
+        if (deposit.status === 'SUCCESS') {
+          logger.info({ depositId }, "Idempotent payment callback detected: already completed successfully, replying 200 OK.");
+          return res.json({ success: true, message: "Duplicate payment signal resolved silently." });
+        }
+
+        if (verifyResult.status === 'SETTLED') {
+          // Commit dynamic balanced ledger entry credits
+          const { BalanceManager } = await import("./src/services/financial/BalanceManager");
+          const finalIdempotencyKey = `dep-callback-${depositId}`;
+
+          await BalanceManager.depositFunds(
+            tenantId,
+            deposit.walletId,
+            verifyResult.amount,
+            finalIdempotencyKey,
+            `Deposit Credit paid via ${providerKey.toUpperCase()} [ID: ${verifyResult.referenceId || depositId}]`
+          );
+
+          // Commit status updates
+          await prisma.deposit.update({
+            where: { id: depositId },
+            data: {
+              status: 'SUCCESS',
+              paymentRef: verifyResult.referenceId || depositId,
+            },
+          });
+
+          logger.info({ depositId, walletId: deposit.walletId }, "SaaS billing deposit finalized. Balance credited via Ledger ledger entries.");
+
+          // Record Success Metrics inside Redis
+          try {
+            const { getRedisClient } = await import("./src/lib/redis");
+            const redisClient = getRedisClient();
+            await redisClient.incr(`financial_metrics:payments:success_count`);
+            await redisClient.incrbyfloat(`financial_metrics:payments:success_volume`, verifyResult.amount);
+          } catch {}
+
+          return res.json({ success: true, message: "Payment processed successfully" });
+        } else if (verifyResult.status === 'EXPIRED') {
+          await prisma.deposit.update({
+            where: { id: depositId },
+            data: { status: 'EXPIRED' },
+          });
+          return res.json({ success: true, message: "Logged as EXPIRED" });
+        } else if (verifyResult.status === 'FAILED') {
+          await prisma.deposit.update({
+            where: { id: depositId },
+            data: { status: 'FAILED' },
+          });
+          return res.json({ success: true, message: "Logged as FAILED" });
+        }
+
+        res.json({ success: true });
+      } catch (err: any) {
+        logger.error({ err, providerKey }, "Payment callback processing exception");
+        res.status(500).json({ error: err.message || "Webhook handling system error" });
+      }
+    }
+  );
+
 
   app.post(
     "/api/financial/settle/initiate",
@@ -1313,10 +1645,18 @@ async function startServer() {
   });
 
   // Vite middleware or static serving configuration
-  const isProd = process.env.NODE_ENV === "production" && fs.existsSync(path.join(process.cwd(), "dist/index.html"));
+  const distPath = path.join(process.cwd(), "dist");
+  const indexPath = path.join(distPath, "index.html");
+  console.log(`[DEBUG] CWD: ${process.cwd()}, DistPath: ${distPath}, IndexExists: ${fs.existsSync(indexPath)}`);
+  const isProd = process.env.NODE_ENV === "production" && fs.existsSync(indexPath);
   
-  // Start background workers
-  const { shutdown: stopWorkers } = startAllWorkers();
+  // Start background workers asynchronously
+  let stopWorkers: () => Promise<void> = async () => {};
+  startAllWorkers().then((api) => {
+    stopWorkers = api.shutdown;
+  }).catch(err => {
+    logger.error({ err }, "Fatal: Failed to start background workers");
+  });
 
   if (isProd) {
     const distPath = path.join(process.cwd(), "dist");
@@ -1335,6 +1675,7 @@ async function startServer() {
 
   const server = app.listen(Number(PORT), "0.0.0.0", () => {                
     logger.info(`NexusCore Production Engine running on http://localhost:${PORT}`);
+    startTracing();
   });
 
   // Enterprise Graceful shutdown

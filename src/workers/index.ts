@@ -6,27 +6,42 @@ import { startLedgerSettlementWorker } from './LedgerSettlementWorker';
 import { startSettlementQueueWorker } from './SettlementQueueWorker';
 import { startPayoutQueueWorker } from './PayoutQueueWorker';
 import { startAuditQueueWorker } from './AuditQueueWorker';
+import { startFinancialIntegrityAuditWorker } from './FinancialIntegrityAuditWorker';
 
-export const startAllWorkers = () => {
+export const startAllWorkers = async () => {
   logger.info('Starting background workers...');
   
-  const transactionWorker = startTransactionWorker();
-  const reconciliationWorker = startReconciliationWorker();
-  const ledgerSettlementWorker = startLedgerSettlementWorker();
-  const queueTelemetryWorker = startQueueTelemetryWorker();
-  const settlementQueueWorker = startSettlementQueueWorker();
-  const payoutQueueWorker = startPayoutQueueWorker();
-  const auditQueueWorker = startAuditQueueWorker();
+  const workers = [
+    { name: 'TransactionWorker', start: startTransactionWorker },
+    { name: 'ReconciliationWorker', start: startReconciliationWorker },
+    { name: 'LedgerSettlementWorker', start: startLedgerSettlementWorker },
+    { name: 'QueueTelemetryWorker', start: startQueueTelemetryWorker },
+    { name: 'SettlementQueueWorker', start: startSettlementQueueWorker },
+    { name: 'PayoutQueueWorker', start: startPayoutQueueWorker },
+    { name: 'AuditQueueWorker', start: startAuditQueueWorker },
+    { name: 'FinancialIntegrityAuditWorker', start: startFinancialIntegrityAuditWorker },
+  ];
+
+  const instances: any[] = [];
+  
+  for (const w of workers) {
+    try {
+      logger.info(`Initializing worker: ${w.name}`);
+      instances.push(w.start());
+    } catch (err) {
+      logger.error({ err }, `Failed to start worker: ${w.name}`);
+    }
+  }
   
   const shutdown = async () => {
     logger.info('Shutting down background workers gracefully...');
-    await transactionWorker.close();
-    await reconciliationWorker.close();
-    await ledgerSettlementWorker.close();
-    await queueTelemetryWorker.close();
-    await settlementQueueWorker.close();
-    await payoutQueueWorker.close();
-    await auditQueueWorker.close();
+    for (const instance of instances) {
+        try {
+            await instance.close();
+        } catch (err) {
+            logger.error({ err }, 'Error during worker shutdown');
+        }
+    }
   };
 
   return { shutdown };

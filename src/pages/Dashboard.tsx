@@ -37,7 +37,9 @@ import { Transaction, Order, Reseller, Wallet } from '../types/index';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { BrandingManager } from '../modules/Reseller/BrandingManager';
 import { resellerService } from '../services/resellers/resellerService';
+import { useSuppliers } from '../hooks/useSuppliers';
 import { diagnostics } from '../utils/diagnostics';
+import { BalanceAlerts } from '../modules/System/BalanceAlerts';
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -102,6 +104,7 @@ export const Dashboard = () => {
   diagnostics.logRender('Dashboard');
   const navigate = useNavigate();
   const { user, role, profile } = useAuth();
+  const { connections, loading: suppliersLoading } = useSuppliers();
   const [showTopUp, setShowTopUp] = React.useState(false);
   const [showBranding, setShowBranding] = React.useState(false);
 
@@ -121,7 +124,196 @@ export const Dashboard = () => {
     // API mutation goes here
   };
 
-  if (role === 'RESELLER') {
+  if (role === 'AGENCY_SUPPLIER_ADMIN') {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-8 md:space-y-12"
+      >
+        {/* Welcome Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+              Service Adapter Console
+            </h2>
+            <p className="text-[13px] text-slate-500 font-medium mt-1">
+              Status: <span className="text-emerald-500">Online</span> &bull; Role: <span className="text-amber-400 font-semibold">Agency Supplier Administrator</span>
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              onClick={() => navigate('/suppliers')}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all shadow-[0_0_20px_rgba(37,99,235,0.15)] active:scale-95"
+            >
+              Configure Adapters
+            </button>
+            <div className="flex items-center gap-2.5 px-4 py-2 bg-emerald-500/[0.03] border border-emerald-500/10 rounded-xl">
+               <ShieldCheck className="w-4 h-4 text-emerald-500" />
+               <div className="flex flex-col justify-center">
+                 <p className="text-[10px] font-bold text-emerald-500/70 uppercase tracking-widest leading-none">Integrity</p>
+                 <p className="text-xs text-white font-medium mt-0.5 leading-none">Verified</p>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Informative Alert box */}
+        <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-3.5">
+          <Activity className="w-5 h-5 text-emerald-400 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-white uppercase tracking-wider">Access Scope Restricted</p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Your administrative credentials are mapped exclusively to <strong>Fulfillment Adapter Configurations</strong> and <strong>Supplier Health Monitoring</strong>. 
+              Billing ledgers, financial journal audits, and payment transaction summaries are suppressed in adherence to data classification protocols.
+            </p>
+          </div>
+        </div>
+
+        {/* Micro-metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-slate-900 border border-white/10 shadow-lg p-5">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2.5 bg-slate-850 rounded-xl border border-white/15">
+                <Cpu className="w-5 h-5 text-blue-400" />
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Fulfillment Nodes</p>
+            <p className="text-2xl font-bold text-white tracking-tight">{connections.length}</p>
+          </Card>
+          
+          <Card className="bg-slate-900 border border-white/10 shadow-lg p-5">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2.5 bg-slate-850 rounded-xl border border-white/15">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Active Connectors</p>
+            <p className="text-2xl font-bold text-white tracking-tight">
+              {connections.filter(c => c.status === 'ACTIVE').length} / {connections.length}
+            </p>
+          </Card>
+
+          <Card className="bg-slate-900 border border-white/10 shadow-lg p-5">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2.5 bg-slate-850 rounded-xl border border-white/15">
+                <Activity className="w-5 h-5 text-indigo-400" />
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Global Health Index</p>
+            <p className="text-2xl font-bold text-white tracking-tight">
+              {connections.length > 0 
+                ? `${(connections.reduce((acc, c) => acc + (c.successRate || 100), 0) / connections.length).toFixed(1)}%`
+                : '100%'}
+            </p>
+          </Card>
+
+          <Card className="bg-slate-900 border border-white/10 shadow-lg p-5">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2.5 bg-slate-850 rounded-xl border border-white/15">
+                <Clock className="w-5 h-5 text-purple-400" />
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Average Service Latency</p>
+            <p className="text-2xl font-bold text-white tracking-tight">
+              {connections.length > 0 
+                ? `${Math.round(connections.reduce((acc, c) => acc + (c.avgResponseTime || 280), 0) / connections.length)}ms`
+                : '280ms'}
+            </p>
+          </Card>
+        </div>
+
+        {/* Supplier Connections list & Logs */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <Card title="Adapter Integration Health" subtitle="Live state of connected fulfillment sources">
+              {suppliersLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                </div>
+              ) : connections.length === 0 ? (
+                <div className="p-8 text-center bg-white/[0.01] border border-white/5 rounded-2xl">
+                  <Cpu className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                  <p className="text-xs text-slate-400 font-semibold mb-2">No Connected Adapters Found</p>
+                  <button 
+                    onClick={() => navigate('/suppliers')}
+                    className="mt-2 text-xs text-blue-400 hover:text-blue-300 font-bold underline"
+                  >
+                    Setup your first adapter connection
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4 mt-4">
+                  {connections.map((conn) => (
+                    <div 
+                      key={conn.id} 
+                      className="p-4 rounded-xl border border-white/5 bg-black/20 hover:bg-white/[0.02] transition-all flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-white/5 rounded-lg border border-white/10 text-slate-400">
+                          <Cpu className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white uppercase tracking-wider">{conn.supplierName}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                              conn.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`} />
+                            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-widest">{conn.status}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right hidden sm:block">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest leading-none mb-1">Latency</p>
+                          <p className="text-xs font-semibold text-white tracking-tight leading-none">{conn.avgResponseTime || 280}ms</p>
+                        </div>
+                        <div className="text-right hidden sm:block">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest leading-none mb-1">Success Rate</p>
+                          <p className="text-xs font-semibold text-white tracking-tight leading-none">{conn.successRate || 100}%</p>
+                        </div>
+                        <button 
+                          onClick={() => navigate('/suppliers')}
+                          className="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-300 border border-white/10"
+                        >
+                          Configure
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card title="Live Adapter Activity Logs" subtitle="Supplier monitoring audit trail">
+              <div className="space-y-4 mt-4">
+                {[
+                  { time: '20:45:12', event: 'Diagnostics Executed', target: 'Digiflazz Node', status: 'Success' },
+                  { time: '19:12:05', event: 'Adapter Synced', target: 'Apigames Multi', status: 'Success' },
+                  { time: '18:55:30', event: 'API Credentials Validated', target: 'Digiflazz Node', status: 'Success' },
+                  { time: '16:40:11', event: 'Product Catalog Refreshed', target: 'Internal DB', status: 'Optimal' }
+                ].map((act, idx) => (
+                  <div key={idx} className="flex items-start justify-between py-2 border-b border-white/5 last:border-0">
+                    <div>
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{act.time}</span>
+                      <p className="text-xs font-semibold text-slate-200 mt-1">{act.event}</p>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{act.target}</p>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider">{act.status}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (role === 'RESELLER' || role === 'RESELLER_MANAGER') {
     if (loading) {
       return (
         <div className="h-[60vh] w-full flex items-center justify-center">
@@ -158,7 +350,7 @@ export const Dashboard = () => {
                 <div className="flex items-center gap-2 mt-1">
                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                   <p className="text-[12px] text-slate-500 font-medium tracking-wide">
-                    Reseller: {resellerData?.name}
+                    {role === 'RESELLER_MANAGER' ? 'Reseller Manager' : 'Reseller'}: {resellerData?.name}
                   </p>
                 </div>
               </div>
@@ -379,7 +571,7 @@ export const Dashboard = () => {
             Dashboard
           </h2>
           <p className="text-[13px] text-slate-500 font-medium mt-1">
-            Status: <span className="text-emerald-500">Online</span> &bull; Agency: {profile?.agencyId || 'Primary'}
+            Status: <span className="text-emerald-500">Online</span> &bull; Agency: {profile?.agencyId || 'Primary'}{role !== 'AGENCY' && role !== 'SUPER_ADMIN' && ` • Role: ${role?.replace('_', ' ')}`}
           </p>
         </div>
         <div className="flex gap-3">
@@ -486,6 +678,7 @@ export const Dashboard = () => {
 
         {/* Side Controls */}
         <div className="space-y-6">
+          <BalanceAlerts />
           <Card title="Quick Navigation" subtitle="Dedicated access points">
             <div className="grid grid-cols-2 gap-3 mt-4">
               {[

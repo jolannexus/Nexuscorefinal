@@ -26,5 +26,17 @@ export const startTransactionWorker = () => {
     logger.info(`Transaction job ${job.id} started processing`);
   });
 
+  worker.on('failed', (job, err) => {
+    logger.error(`Transaction job ${job?.id} failed: ${err.message}`);
+  });
+
+  worker.on('stalled', (jobId) => {
+    logger.warn(`Transaction job ${jobId} stalled`);
+  });
+
+  worker.on('error', (err) => {
+    logger.error(`Transaction worker error: ${err.message}`);
+  });
+
   return worker;
 };

@@ -1,4 +1,4 @@
-export type Role = 'SUPER_ADMIN' | 'AGENCY' | 'RESELLER' | 'PLATFORM_ADMIN' | 'AGENCY_ADMIN' | 'CUSTOMER';
+export type Role = 'SUPER_ADMIN' | 'PLATFORM_ADMIN' | 'AGENCY' | 'AGENCY_ADMIN' | 'AGENCY_SUPPLIER_ADMIN' | 'RESELLER' | 'RESELLER_MANAGER' | 'CUSTOMER';
 
 export interface Theme {
   primary: string;
@@ -118,6 +118,8 @@ export interface SupplierConnection {
   status: 'ACTIVE' | 'INACTIVE' | 'ERROR';
   lastSyncAt: any;
   createdAt: any;
+  successRate?: number;
+  avgResponseTime?: number;
 }
 
 export interface SupplierHealth {

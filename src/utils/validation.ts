@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const UserSchema = z.object({
   uid: z.string().min(1),
   email: z.string().email(),
-  role: z.enum(['SUPER_ADMIN', 'AGENCY', 'RESELLER', 'PLATFORM_ADMIN', 'AGENCY_ADMIN', 'CUSTOMER']),
+  role: z.enum(['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN', 'AGENCY_SUPPLIER_ADMIN', 'RESELLER', 'RESELLER_MANAGER', 'CUSTOMER']),
   agencyId: z.string().nullable(),
   displayName: z.string().max(100).nullable(),
 });

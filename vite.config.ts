@@ -30,11 +30,6 @@ export default defineConfig(({mode}) => {
       sourcemap: true,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-charts': ['recharts'],
-            'vendor-core': ['@tanstack/react-query', 'lucide-react']
-          }
         }
       }
     }

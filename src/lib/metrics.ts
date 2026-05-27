@@ -109,6 +109,19 @@ export const transactionRollbackCounter = new client.Counter({
   labelNames: ['tenant_id'],
 });
 
+export const paymentSuccessCounter = new client.Counter({
+  name: 'nexuscore_payment_success_total',
+  help: 'Total successful payment charges settled',
+  labelNames: ['tenant_id', 'provider', 'method'],
+});
+
+export const paymentGatewayLatency = new client.Histogram({
+  name: 'nexuscore_payment_gateway_latency_seconds',
+  help: 'Latency of payment charge generation API calls',
+  labelNames: ['provider', 'method'],
+  buckets: [0.1, 0.5, 1, 2, 5, 10],
+});
+
 // Register metrics
 register.registerMetric(transactionCounter);
 register.registerMetric(transactionDuration);
@@ -127,3 +140,5 @@ register.registerMetric(settlementThroughput);
 register.registerMetric(escrowUtilization);
 register.registerMetric(payoutAnomalyCounter);
 register.registerMetric(transactionRollbackCounter);
+register.registerMetric(paymentSuccessCounter);
+register.registerMetric(paymentGatewayLatency);

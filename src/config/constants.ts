@@ -19,6 +19,15 @@ export const PERMISSIONS: Record<Role, Permissions> = {
     canManageSuppliers: true,
     canViewGrowth: true,
   },
+  AGENCY_SUPPLIER_ADMIN: {
+    canEditCatalog: false,
+    canViewProfits: false,
+    canManageDomains: false,
+    canViewFraud: false,
+    canUseTerminal: false,
+    canManageSuppliers: true,
+    canViewGrowth: false,
+  },
   RESELLER: {
     canEditCatalog: false,
     canViewProfits: false,
@@ -45,6 +54,15 @@ export const PERMISSIONS: Record<Role, Permissions> = {
     canUseTerminal: false,
     canManageSuppliers: true,
     canViewGrowth: true,
+  },
+  RESELLER_MANAGER: {
+    canEditCatalog: false,
+    canViewProfits: true,
+    canManageDomains: false,
+    canViewFraud: false,
+    canUseTerminal: false,
+    canManageSuppliers: false,
+    canViewGrowth: false,
   },
   CUSTOMER: {
     canEditCatalog: false,

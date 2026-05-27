@@ -25,7 +25,7 @@ export const DepositSystemPage = () => {
     setLoading(true);
     try {
       await BillingService.requestDeposit({
-        resellerId: profile.role === 'RESELLER' ? profile.uid : 'ADMIN_MANUAL',
+        resellerId: (profile.role === 'RESELLER' || profile.role === 'RESELLER_MANAGER') ? profile.uid : 'ADMIN_MANUAL',
         agencyId: profile.agencyId,
         amount: numAmount,
         paymentMethod: method
@@ -61,7 +61,7 @@ export const DepositSystemPage = () => {
         {/* Deposit Form - For Resellers or Direct Add */}
         <div className="lg:col-span-1 space-y-6">
           <Card 
-            title={role === 'AGENCY' ? 'Manual Adjustment' : 'Top-up Balance'} 
+            title={(role === 'AGENCY' || role === 'AGENCY_ADMIN') ? 'Manual Adjustment' : 'Top-up Balance'} 
             subtitle="Add funds to your account"
           >
             <form className="space-y-6" onSubmit={handleSubmit}>

@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { LedgerService } from './ledgerService';
 import { Prisma } from '@prisma/client';
+import { FraudDetectionService, TransactionContext } from '../../domain/fraud/FraudDetectionService';
 
 export interface OrderCreationResult {
   success: boolean;
@@ -23,8 +24,17 @@ export class TransactionManagerService {
     quantity: number;
     targetAccount: string;
     idempotencyKey?: string;
+    fraudContext?: TransactionContext;
   }): Promise<OrderCreationResult> {
     try {
+      // 0. Fraud Check
+      if (params.fraudContext) {
+        const isSafe = await FraudDetectionService.isTransactionSafe(params.fraudContext);
+        if (!isSafe) {
+          throw new Error('FRAUD_SCORE_TOO_HIGH');
+        }
+      }
+
       return await prisma.$transaction(async (tx) => {
         // 1. Check for optional client/API-level idempotency to prevent duplicate submissions
         if (params.idempotencyKey) {

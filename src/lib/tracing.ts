@@ -15,7 +15,9 @@ const sdk = new NodeSDK({
   ],
 });
 
-sdk.start();
+export const startTracing = () => {
+  sdk.start();
+};
 
 process.on('SIGTERM', () => {
   sdk.shutdown()
