@@ -82,13 +82,13 @@ connection: getRedisClient(),
 
 events.on('failed', ({ jobId, failedReason }) => {
 logger.error(
-"Job ${jobId} failed in ${name}: ${failedReason}"
+`Job ${jobId} failed in ${name}: ${failedReason}`
 )
 })
 
 events.on('completed', ({ jobId }) => {
 logger.info(
-"Job ${jobId} completed in ${name}"
+`Job ${jobId} completed in ${name}`
 )
 })
 
