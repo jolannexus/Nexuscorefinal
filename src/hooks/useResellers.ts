@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Reseller } from '../types/index';
 import { resellerService } from '../services/resellers/resellerService';
-import { LedgerService } from '../services/billing/ledgerService';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 
 export const useResellers = () => {
   const [resellers, setResellers] = useState<Reseller[]>([]);
@@ -41,13 +41,22 @@ export const useResellers = () => {
   const updateBalance = async (id: string, amount: number) => {
     if (!profile?.agencyId) throw new Error('Agency context missing');
     try {
-      await LedgerService.executeLedgerEntry({
-        resellerId: id,
-        agencyId: profile.agencyId,
-        amount: Math.abs(amount),
-        type: amount >= 0 ? 'CREDIT' : 'DEBIT',
-        description: 'Manual adjustment by admin'
+      const token = authService.getToken();
+      const response = await fetch(`/api/resellers/${id}/balance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          amount,
+          description: 'Manual adjustment by admin'
+        })
       });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to adjust balance');
+      }
       await fetchResellers();
     } catch (err: any) {
       throw err;

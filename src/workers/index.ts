@@ -48,7 +48,15 @@ export const startAllWorkers = async () => {
   for (const w of workers) {
     try {
       logger.info(`Initializing worker: ${w.name}`);
-      instances.push(w.start());
+      const instance = w.start() as any;
+      
+      if (instance && typeof instance.on === 'function') {
+        instance.on('error', (err: Error) => {
+          logger.error({ err, worker: w.name }, `[CRITICAL_WORKER_ERROR] Worker encountered an isolated error. Process thread preserved.`);
+        });
+      }
+      
+      instances.push(instance);
     } catch (err) {
       logger.error({ err }, `Failed to start worker: ${w.name}`);
     }

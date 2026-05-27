@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: nexuscore-api
+    env: docker
+    region: singapore
+    plan: standard
+    healthCheckPath: /live
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Must be set via Render Dashboard
+      - key: REDIS_URL
+        sync: false # Must be set via Render Dashboard
+      - key: ENCRYPTION_KEY
+        sync: false # Must be set via Render Dashboard
+      - key: JWT_SECRET
+        sync: false # Must be set via Render Dashboard
+      - key: SENTRY_DSN
+        sync: false
+    autoDeploy: false
+
+  # Optional Background Worker if you want a split process. 
+  # But right now the monolith runs workers alongside the API layer.
+  # - type: worker
+  #   name: nexuscore-worker
+  #   env: docker
+  #   region: singapore
+  #   plan: standard
+  #   dockerCommand: "dist/server.cjs"
+  #   envVars: ...

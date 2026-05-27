@@ -921,6 +921,101 @@ async function startServer() {
     }
   });
 
+  // Manual Reseller Balance adjustment API
+  app.post("/api/resellers/:id/balance", requireAuth, requireTenant, requirePermission('reseller.create'), async (req, res) => {
+    const { id } = req.params;
+    const { amount, description } = req.body;
+    const numAmount = Number(amount);
+    if (isNaN(numAmount)) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+    try {
+      const { LedgerService } = await import('./src/services/billing/ledgerService');
+      const result = await LedgerService.executeLedgerEntry({
+        resellerId: id,
+        agencyId: (req as any).agency.id,
+        amount: Math.abs(numAmount),
+        type: numAmount >= 0 ? 'CREDIT' : 'DEBIT',
+        description: description || 'Manual adjustment by admin'
+      });
+      res.json({ success: true, result });
+    } catch (err: any) {
+      console.error("Failed to adjust reseller balance:", err);
+      res.status(500).json({ error: err.message || "Failed to adjust balance" });
+    }
+  });
+
+  // Client-Facing/Admin-Facing Deposit System Endpoints
+  app.get("/api/billing/deposit/pending", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const { BillingService: BillingServiceServer } = await import('./src/services/billing/billingService.server');
+      const data = await BillingServiceServer.getPendingDeposits((req as any).agency.id);
+      res.json(data);
+    } catch (err: any) {
+      console.error("Failed to get pending deposits:", err);
+      res.status(500).json({ error: err.message || "Failed to load pending deposits" });
+    }
+  });
+
+  app.post("/api/billing/deposit/request", requireAuth, requireTenant, async (req, res) => {
+    const { resellerId, agencyId, amount, paymentMethod } = req.body;
+    if (!resellerId || !agencyId || !amount || !paymentMethod) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+    try {
+      const { BillingService: BillingServiceServer } = await import('./src/services/billing/billingService.server');
+      const result = await BillingServiceServer.requestDeposit({
+        resellerId,
+        agencyId,
+        amount: Number(amount),
+        paymentMethod
+      });
+      res.json({ success: result });
+    } catch (err: any) {
+      console.error("Failed to request deposit:", err);
+      res.status(500).json({ error: err.message || "Failed to submit deposit request" });
+    }
+  });
+
+  app.post("/api/billing/deposit/approve", requireAuth, requireTenant, async (req, res) => {
+    // Restrict approval exclusively to platform administrators or tenant agents
+    const userRole = (req as any).user?.role;
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'AGENCY' && userRole !== 'AGENCY_ADMIN') {
+      return res.status(403).json({ error: "Unauthorized role for billing operations" });
+    }
+    const { transaction } = req.body;
+    if (!transaction) {
+      return res.status(400).json({ error: "Missing transaction parameter" });
+    }
+    try {
+      const { BillingService: BillingServiceServer } = await import('./src/services/billing/billingService.server');
+      const result = await BillingServiceServer.approveDeposit(transaction);
+      res.json({ success: true, result });
+    } catch (err: any) {
+      console.error("Failed to approve deposit:", err);
+      res.status(500).json({ error: err.message || "Failed to approve deposit" });
+    }
+  });
+
+  app.post("/api/billing/deposit/reject", requireAuth, requireTenant, async (req, res) => {
+    const userRole = (req as any).user?.role;
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'AGENCY' && userRole !== 'AGENCY_ADMIN') {
+      return res.status(403).json({ error: "Unauthorized role for billing operations" });
+    }
+    const { agencyId, id } = req.body;
+    if (!agencyId || !id) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+    try {
+      const { BillingService: BillingServiceServer } = await import('./src/services/billing/billingService.server');
+      const result = await BillingServiceServer.rejectDeposit(agencyId, id);
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Failed to reject deposit:", err);
+      res.status(500).json({ error: err.message || "Failed to reject deposit" });
+    }
+  });
+
   // Ledger Audit Explorations API
   app.get(
     "/api/reconciliation/ledger",
