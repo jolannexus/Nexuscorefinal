@@ -1,52 +1,121 @@
-import { PrismaClient } from '@prisma/client';
-import { logger } from './logger';
+// src/lib/prisma.ts
 
-// Gracefully supply default connection parameters if not set to prevent initial PrismaClient initialization crash in sandbox environment
+import { PrismaClient } from '@prisma/client'
+import { logger } from './logger'
+
+// Fallback database URL for local/sandbox safety
 if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/nexuscore?schema=public&sslmode=prefer';
+process.env.DATABASE_URL =
+'postgresql://postgres:postgres@localhost:5432/nexuscore?schema=public&sslmode=prefer'
 }
 
 if (!process.env.DIRECT_URL) {
-  process.env.DIRECT_URL = process.env.DATABASE_URL; // Fallback
+process.env.DIRECT_URL = process.env.DATABASE_URL
 }
 
-// Optimize Supabase PostgreSQL integration for PgBouncer
-if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("pgbouncer=true")) {
-  const separator = process.env.DATABASE_URL.includes("?") ? "&" : "?";
-  process.env.DATABASE_URL += `${separator}pgbouncer=true&connection_limit=1`;
+// Apply PgBouncer optimization once
+if (
+process.env.DATABASE_URL &&
+!process.env.DATABASE_URL.includes('pgbouncer=true')
+) {
+const separator = process.env.DATABASE_URL.includes('?') ? '&' : '?'
+
+process.env.DATABASE_URL +=
+"${separator}pgbouncer=true&connection_limit=1"
 }
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as {
+prisma?: PrismaClient
+}
 
-export const prisma = (globalForPrisma.prisma || new PrismaClient({
-  log: [], // Suppress connection connection errors in console logs for sandbox environment
-})).$extends({
-  query: {
-    async $allOperations({ operation, model, args, query }) {
-      const start = Date.now();
-      const result = await query(args);
-      const end = Date.now();
-      const duration = end - start;
-      
-      if (duration > 100) { // Log queries taking longer than 100ms
-        logger.warn(`Slow Prisma query detected: ${model}.${operation} took ${duration}ms`);
-      }
-      return result;
+export const prisma =
+globalForPrisma.prisma ??
+new PrismaClient({
+log:
+process.env.NODE_ENV === 'production'
+? ['error']
+: ['error', 'warn'],
+}).$extends({
+query: {
+async $allOperations({ operation, model, args, query }) {
+const start = Date.now()
+
+    const result = await query(args)
+
+    const duration = Date.now() - start
+
+    if (duration > 100) {
+      logger.warn(
+        `Slow Prisma query detected: ${model}.${operation} took ${duration}ms`
+      )
+    }
+
+    return result
+  },
+
+  ledgerJournal: {
+    update: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerJournal is immutable.'
+      )
     },
-    ledgerJournal: {
-      update: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerJournal is strictly immutable and cannot be updated.'); },
-      updateMany: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerJournal is strictly immutable and cannot be updated.'); },
-      delete: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerJournal is strictly immutable and cannot be deleted.'); },
-      deleteMany: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerJournal is strictly immutable and cannot be deleted.'); },
+
+    updateMany: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerJournal is immutable.'
+      )
     },
-    ledgerEntry: {
-      update: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerEntry is strictly immutable and cannot be updated.'); },
-      updateMany: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerEntry is strictly immutable and cannot be updated.'); },
-      delete: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerEntry is strictly immutable and cannot be deleted.'); },
-      deleteMany: () => { throw new Error('CRITICAL_FINANCIAL_ERROR: LedgerEntry is strictly immutable and cannot be deleted.'); },
+
+    delete: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerJournal is immutable.'
+      )
+    },
+
+    deleteMany: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerJournal is immutable.'
+      )
     },
   },
-}) as unknown as PrismaClient;
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+  ledgerEntry: {
+    update: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerEntry is immutable.'
+      )
+    },
 
+    updateMany: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerEntry is immutable.'
+      )
+    },
+
+    delete: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerEntry is immutable.'
+      )
+    },
+
+    deleteMany: () => {
+      throw new Error(
+        'CRITICAL_FINANCIAL_ERROR: LedgerEntry is immutable.'
+      )
+    },
+  },
+},
+
+}) as unknown as PrismaClient
+
+// Always cache singleton
+globalForPrisma.prisma = prisma
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+await prisma.$disconnect()
+})
+
+process.on('SIGTERM', async () => {
+await prisma.$disconnect()
+})
