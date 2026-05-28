@@ -1,6 +1,27 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from './logger';
 
+function cleanDatabaseUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  let cleaned = url;
+  
+  // Strip and URL-encode bracketed passwords automatically
+  if (cleaned.includes('[') && cleaned.includes(']')) {
+    cleaned = cleaned.replace(/\[(.*?)\]/, (_, p1) => encodeURIComponent(p1));
+  }
+  
+  // Ensure host db.tymrypisfoskisfklnqb.supabase.co uses port 6543 instead of 5432
+  if (cleaned.includes('db.tymrypisfoskisfklnqb.supabase.co')) {
+    cleaned = cleaned.replace(':5432', ':6543');
+  }
+  
+  return cleaned;
+}
+
+// Ensure connection parameters are sanitized and cleaned before Prisma Client parses them
+process.env.DATABASE_URL = cleanDatabaseUrl(process.env.DATABASE_URL);
+process.env.DIRECT_URL = cleanDatabaseUrl(process.env.DIRECT_URL);
+
 // Gracefully supply default connection parameters if not set to prevent initial PrismaClient initialization crash in sandbox environment
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/nexuscore?schema=public&sslmode=prefer';
