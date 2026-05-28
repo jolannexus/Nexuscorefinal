@@ -128,6 +128,12 @@ async function startServer() {
 
   // Tenant Detection Middleware via PostgreSQL databases first
   app.use(async (req, res, next) => {
+    // Bypass tenant detection for SRE health / metrics endpoints and asset requests
+    const bypassPaths = ["/health", "/live", "/ready", "/metrics", "/favicon.ico"];
+    if (bypassPaths.includes(req.path) || req.path.startsWith("/api/health")) {
+      return next();
+    }
+
     const host = req.headers.host || "";
     const parts = host.split(".");
     const potentialSlug =
@@ -149,6 +155,29 @@ async function startServer() {
         }).catch(() => null);
         if (!tenant) {
           tenant = await prisma.tenant.findFirst().catch(() => null);
+        }
+      }
+
+      // 4. Auto-provision default tenant if table is empty to avoid cold start failure
+      if (!tenant) {
+        try {
+          tenant = await prisma.tenant.create({
+            data: {
+              name: "Default Nexus Tenant",
+              slug: "default",
+              status: "ACTIVE",
+              brandingConfig: {
+                theme: {
+                  primary: "#10b981",
+                  secondary: "#00af87",
+                  accent: "#8b5cf6"
+                }
+              }
+            }
+          });
+          logger.info("Successfully auto-provisioned default tenant: default");
+        } catch (createErr) {
+          logger.warn({ err: createErr }, "Failed to auto-provision default tenant on the fly");
         }
       }
 

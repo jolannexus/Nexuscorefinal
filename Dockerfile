@@ -21,8 +21,6 @@ RUN npm ci
 RUN npx prisma generate
 
 # Build optimal production assets
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-
 RUN npm run build
 
 # ==========================
