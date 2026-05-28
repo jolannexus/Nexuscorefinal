@@ -134,10 +134,21 @@ async function startServer() {
       return next();
     }
 
-    const host = req.headers.host || "";
+    const rawHost = req.headers.host || "";
+    const host = rawHost.split(":")[0]; // Strip port to ensure clean custom domain and slug lookups
     const parts = host.split(".");
-    const potentialSlug =
-      parts.length > 2 && !host.includes("run.app") ? parts[0] : null;
+    
+    // Determine potential subdomain slug
+    let potentialSlug: string | null = null;
+    if (host.includes("localhost")) {
+      if (parts.length >= 2 && parts[parts.length - 1] === "localhost") {
+        potentialSlug = parts[0];
+      }
+    } else if (!host.includes("run.app")) {
+      if (parts.length > 2) {
+        potentialSlug = parts[0];
+      }
+    }
 
     try {
       // 1. Try mapping by custom domain in SQL database
