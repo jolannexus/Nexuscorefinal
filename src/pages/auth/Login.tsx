@@ -5,7 +5,9 @@ import { authService } from '../../services/authService';
 import { cn } from '../../utils/cn';
 import { motion } from 'motion/react';
 import { useTenant } from '../../contexts/TenantContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { BRAND } from '../../config/branding';
+import { BrandLogo } from '../../components/BrandLogo';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +16,7 @@ export const Login = () => {
   const [error, setError] = useState<string | null>(null);
   
   const { tenant, isLoading: tenantLoading } = useTenant();
+  const { refreshAuth } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
@@ -26,6 +29,7 @@ export const Login = () => {
     setError(null);
     try {
       await authService.login(email, password, tenant?.id);
+      await refreshAuth();
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
@@ -39,6 +43,7 @@ export const Login = () => {
     setError(null);
     try {
       await authService.loginWithGoogle(tenant?.id);
+      await refreshAuth();
       navigate(from, { replace: true });
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
@@ -67,9 +72,7 @@ export const Login = () => {
         <div className="bg-[#050505] backdrop-blur-2xl border border-white/10 rounded-2xl p-10 shadow-[0_8px_40px_rgba(0,0,0,0.8)] relative overflow-hidden">
           {/* Header */}
           <div className="flex flex-col items-center mb-8 text-center">
-            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black mb-6">
-              <Cpu className="w-6 h-6" />
-            </div>
+            <BrandLogo className="w-14 h-14 mb-6" />
             <h1 className="text-xl font-semibold text-white tracking-tight leading-none">{BRAND.name}</h1>
             <p className="text-[11px] text-slate-500 font-medium tracking-wide uppercase mt-2">
               Digital Monetization Platform

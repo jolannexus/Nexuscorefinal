@@ -14,7 +14,7 @@ import {
   Play,
   Settings2,
   Trash2,
-  Code,
+  Terminal,
   Activity
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
@@ -168,8 +168,8 @@ const DevSettings = () => {
             <div className="space-y-2 mt-4">
                {[
                  { label: 'REST API Docs', icon: Globe, path: '#' },
-                 { label: 'Node.js SDK', icon: Code, path: '#' },
-                 { label: 'Python SDK', icon: Code, path: '#' },
+                 { label: 'Node.js SDK', icon: Terminal, path: '#' },
+                 { label: 'Python SDK', icon: Terminal, path: '#' },
                  { label: 'Postman Collection', icon: Zap, path: '#' }
                ].map((doc, i) => (
                  <a 

@@ -1,11 +1,11 @@
 import React from 'react';
-import { Code } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { SectionHeader } from '../../components/ui/SectionHeader';
 
 export const ServiceMap = () => (
   <Card className="border-purple-900/20">
-    <SectionHeader title="08. DECENTRALIZED DATA MAP" icon={Code} colorClass="text-purple-400" />
+    <SectionHeader title="08. DECENTRALIZED DATA MAP" icon={Terminal} colorClass="text-purple-400" />
     <div className="space-y-2 relative">
       <div className="absolute left-3 top-2 bottom-2 w-px bg-slate-800" />
       {[

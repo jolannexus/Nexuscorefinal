@@ -40,6 +40,7 @@ import { resellerService } from '../services/resellers/resellerService';
 import { useSuppliers } from '../hooks/useSuppliers';
 import { diagnostics } from '../utils/diagnostics';
 import { BalanceAlerts } from '../modules/System/BalanceAlerts';
+import { IncomingWebhooksTable } from '../components/IncomingWebhooksTable';
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -374,23 +375,7 @@ export const Dashboard = () => {
 
           <div className="space-y-6">
             <Card title="Live Adapter Activity Logs" subtitle="Supplier monitoring audit trail">
-              <div className="space-y-4 mt-4">
-                {[
-                  { time: '20:45:12', event: 'Diagnostics Executed', target: 'Digiflazz Node', status: 'Success' },
-                  { time: '19:12:05', event: 'Adapter Synced', target: 'Apigames Multi', status: 'Success' },
-                  { time: '18:55:30', event: 'API Credentials Validated', target: 'Digiflazz Node', status: 'Success' },
-                  { time: '16:40:11', event: 'Product Catalog Refreshed', target: 'Internal DB', status: 'Optimal' }
-                ].map((act, idx) => (
-                  <div key={idx} className="flex items-start justify-between py-2 border-b border-white/5 last:border-0">
-                    <div>
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{act.time}</span>
-                      <p className="text-xs font-semibold text-slate-200 mt-1">{act.event}</p>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{act.target}</p>
-                    </div>
-                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider">{act.status}</span>
-                  </div>
-                ))}
-              </div>
+              <IncomingWebhooksTable />
             </Card>
           </div>
         </div>
@@ -808,6 +793,14 @@ export const Dashboard = () => {
              </div>
           </Card>
         </div>
+
+        {/* Full-width Incoming Webhooks Table */}
+        <div className="lg:col-span-3 pb-8">
+           <Card title="Incoming Supplier Webhooks" subtitle="Real-time notifications and callbacks from connected suppliers">
+              <IncomingWebhooksTable />
+           </Card>
+        </div>
+
         {renderToasts()}
       </motion.div>
     </motion.div>

@@ -67,35 +67,23 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
   }, [isTrackOrderOpen]);
 
   const handleTrackOrder = async () => {
-    if (!trackOrderId.trim() || !tenant?.id) return;
+    if (!trackOrderId.trim()) return;
     setIsTracking(true);
     setTrackingError(null);
     setTrackingResult(null);
     try {
-      const allOrders = await nexusApi.getOrders();
+      const searchInput = trackOrderId.trim();
+      const tenantQuery = tenant?.id ? `?tenantId=${tenant.id}` : '';
       
-      const searchInput = trackOrderId.trim().toUpperCase();
-      const cleanedInput = searchInput.startsWith('ORD_') ? searchInput.slice(4) : searchInput;
-      
-      const found = allOrders.find(ord => {
-        const ordIdUpper = ord.id.toUpperCase();
-        const friendlyId = ord.id.slice(-8).toUpperCase();
-        const targetUpper = (ord.targetAccount || '').toUpperCase();
-        
-        return ordIdUpper === searchInput || 
-               friendlyId === cleanedInput || 
-               targetUpper === searchInput ||
-               ord.id === trackOrderId;
-      });
-
-      if (found) {
-        setTrackingResult(found);
-      } else {
-        setTrackingError("No order found matching this identification code.");
+      const res = await fetch(`/api/orders/track/${encodeURIComponent(searchInput)}${tenantQuery}`);
+      if (!res.ok) {
+        throw new Error("Order not found");
       }
+      const data = await res.json();
+      setTrackingResult(data);
     } catch (e: any) {
       console.error("Tracking lookup error:", e);
-      setTrackingError("Failed to lookup order. Database error.");
+      setTrackingError("No order found matching this identification code.");
     } finally {
       setIsTracking(false);
     }
@@ -150,7 +138,8 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
     }
 
     diagnostics.incrementFirestore('getProducts', tenant.id);
-    productService.getProducts(tenant.id)
+    fetch(`/api/products/public/${tenant.id}`)
+      .then(res => res.json())
       .then(data => {
         setProducts(data);
         setLoading(false);

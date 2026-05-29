@@ -1,4 +1,5 @@
 import { Order, Product, SupplierConnection } from '../../types/index';
+import { authService } from '../authService';
 
 export const orderService = {
   /**
@@ -6,8 +7,12 @@ export const orderService = {
    */
   async getOrders(agencyId: string): Promise<Order[]> {
     try {
+      const token = authService.getToken();
       const response = await fetch('/api/orders', {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (!response.ok) throw new Error("Failed to fetch orders");
       return await response.json();
@@ -28,12 +33,14 @@ export const orderService = {
     supplierConnection: SupplierConnection
   ): Promise<string> {
     const agencyId = supplierConnection.agencyId;
+    const token = authService.getToken();
     
     // Delegate to PostgreSQL Transaction Coordinator via API
     const response = await fetch('/api/orders', {
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
+         'Authorization': `Bearer ${token}`,
          'x-idempotency-key': `place-order-${resellerId}-${productId}-${Date.now()}`
       },
       body: JSON.stringify({ resellerId, agencyId, productId, quantity, targetAccount })
@@ -50,7 +57,8 @@ export const orderService = {
       fetch('/api/orders/process', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ orderId: result.orderId, agencyId })
       }).catch(e => console.error("[Fulfillment Trigger Warning] Async fetch call failed:", e));
@@ -65,11 +73,13 @@ export const orderService = {
    * Execute manual/restful triggers for processing the fulfillment pipeline.
    */
   async processOrder(agencyId: string, orderId: string): Promise<void> {
+    const token = authService.getToken();
     try {
       const response = await fetch('/api/orders/process', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ orderId, agencyId })
       });

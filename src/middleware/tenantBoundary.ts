@@ -18,7 +18,8 @@ export const tenantBoundaryMiddleware = (requiredPermission?: Permission) => {
     }
 
     // Tenant isolation check
-    if (targetTenantId && user.agencyId !== targetTenantId && user.role !== 'SUPER_ADMIN') {
+    const userTenantId = (user as any).tenantId || user.agencyId;
+    if (targetTenantId && userTenantId !== targetTenantId && user.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: 'Tenant isolation violation' });
     }
 

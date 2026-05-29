@@ -8,6 +8,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { diagnostics } from '../../utils/diagnostics';
 
+import { authService } from '../../services/authService';
+
 export const TransactionList = () => {
   diagnostics.logRender('TransactionList');
   const { profile, role } = useAuth();
@@ -16,8 +18,19 @@ export const TransactionList = () => {
   const { data: transactions = [], isLoading: loading } = useQuery({
     queryKey: ['transactions', profile?.agencyId, profile?.uid],
     queryFn: async () => {
-       // Mock for safety, wait for API implementation
-       return [] as Transaction[];
+       const token = authService.getToken();
+       const res = await fetch('/api/wallets/me/transactions', {
+         headers: {
+           'Authorization': `Bearer ${token}`
+         }
+       });
+       if (!res.ok) throw new Error('Failed to fetch transactions');
+       const data = await res.json();
+       // Normalize date for display
+       return data.map((t: any) => ({
+         ...t,
+         createdAt: { toDate: () => new Date(t.createdAt) }
+       })) as Transaction[];
     },
     enabled: !!profile?.agencyId
   });

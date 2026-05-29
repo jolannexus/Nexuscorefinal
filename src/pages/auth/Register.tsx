@@ -5,10 +5,12 @@ import { authService } from '../../services/authService';
 import { cn } from '../../utils/cn';
 import { motion } from 'motion/react';
 import { Role } from '../../types/index';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 
 export const Register = () => {
   const { tenant } = useTenant();
+  const { refreshAuth } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>(tenant ? 'RESELLER' : 'AGENCY');
@@ -23,6 +25,7 @@ export const Register = () => {
     setError(null);
     try {
       await authService.register(email, password, tenant?.id, role);
+      await refreshAuth();
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Registration failed');

@@ -85,9 +85,11 @@ export class LedgerEngine {
         // Sort IDs to prevent deadlocks
         walletIdsToLock.sort();
         
-        // Execute raw query for locks
+        // Execute raw query for locks safely
+        const placeholders = walletIdsToLock.map((_, i) => `$${i + 1}`).join(',');
         const wallets = await tx.$queryRawUnsafe<any[]>(
-          `SELECT id, balance, "frozenBalance" FROM "Wallet" WHERE id IN (${walletIdsToLock.map(id => `'${id}'`).join(',')}) FOR NO KEY UPDATE`
+          `SELECT id, balance, "frozenBalance" FROM "Wallet" WHERE id IN (${placeholders}) FOR NO KEY UPDATE`,
+          ...walletIdsToLock
         );
 
         if (wallets.length !== walletIdsToLock.length) {
@@ -179,8 +181,8 @@ export class LedgerEngine {
       for (const [id, w] of walletsMap.entries()) {
         await tx.$executeRawUnsafe(
           `UPDATE "Wallet" SET balance = $1::numeric, "frozenBalance" = $2::numeric, "updatedAt" = NOW() WHERE id = $3`,
-          w.balance.toNumber(),
-          w.frozenBalance.toNumber(),
+          w.balance.toString(),
+          w.frozenBalance.toString(),
           id
         );
       }

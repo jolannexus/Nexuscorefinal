@@ -1,5 +1,5 @@
 export const BRAND = {
-  name: "NexusCore Technologies",
+  name: "NexusCore Network",
   tagline: "Digital Transaction Platform",
   version: "1.0.0",
   isDemo: false, // Master flag for demo mode

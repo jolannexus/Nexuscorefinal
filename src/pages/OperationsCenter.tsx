@@ -14,7 +14,6 @@ import {
   Zap, 
   ChevronRight, 
   Server, 
-  Code, 
   Key, 
   Repeat, 
   Layers, 

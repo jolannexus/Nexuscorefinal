@@ -1,4 +1,5 @@
 import { Agency, Order, Product, User } from './types';
+import { authService } from './services/authService';
 
 const API_BASE = '/api';
 
@@ -12,35 +13,34 @@ export const nexusApi = {
 
   // Wallet & User
   async getBalance(userId: string): Promise<{ balance: number }> {
-    // In real implementation, this would be a secure GET with JWT
-    return { balance: 1250.50 };
+    const token = authService.getToken();
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch balance');
+    const data = await res.json();
+    return { balance: data.user?.balance || 0 };
   },
 
   // Products
   async getProducts(): Promise<Product[]> {
-    return [
-      { 
-        id: '1', 
-        agencyId: 'mock-agency',
-        name: '100 Diamonds', 
-        category: 'Mobile Legends', 
-        basePrice: 15.00, 
-        status: 'ACTIVE',
-        supplierId: 'mock-1',
-        supplierName: 'Mock',
-        appName: 'Mobile Legends',
-        productCode: 'ML-100',
-        syncedAt: new Date(),
-        isEnabled: true
-      },
-    ];
+    const token = authService.getToken();
+    const res = await fetch(`${API_BASE}/products`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return [];
+    return res.json();
   },
 
   // Branding settings
   async updateBrandingSettings(tenantId: string, branding: any): Promise<any> {
+    const token = authService.getToken();
     const res = await fetch(`${API_BASE}/tenants/${tenantId}/branding`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify(branding),
     });
     if (!res.ok) throw new Error('Failed to update branding');
@@ -49,9 +49,13 @@ export const nexusApi = {
 
   // Payment gateway settings
   async updatePaymentSettings(tenantId: string, settings: any): Promise<any> {
+    const token = authService.getToken();
     const res = await fetch(`${API_BASE}/tenants/${tenantId}/payment`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify(settings),
     });
     if (!res.ok) throw new Error('Failed to update payment settings');
@@ -60,16 +64,23 @@ export const nexusApi = {
 
   // Ordering
   async placeOrder(productId: string, customerData: string): Promise<Order> {
-    const res = await fetch(`${API_BASE}/order/simulate`, {
+    const token = authService.getToken();
+    const res = await fetch(`${API_BASE}/orders`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId, customerData }),
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ productId, customerData }), // Note: backend expects quantity, targetAccount, resellerId, etc.
     });
     return res.json();
   },
   
   async getOrders(): Promise<Order[]> {
-    const res = await fetch(`${API_BASE}/orders`);
+    const token = authService.getToken();
+    const res = await fetch(`${API_BASE}/orders`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!res.ok) throw new Error('Failed to fetch orders');
     return res.json();
   }

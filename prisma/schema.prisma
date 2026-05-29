@@ -213,6 +213,7 @@ model LedgerJournal {
   reconciliation ReconciliationRecord?
 
   @@index([tenantId, createdAt])
+  @@index([tenantId, type, createdAt])
   @@index([orderId])
   @@index([idempotencyKey])
 }

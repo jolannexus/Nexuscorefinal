@@ -33,8 +33,10 @@ import { useTenant } from '../../contexts/TenantContext';
 import { authService } from '../../services/authService';
 import { BRAND } from '../../config/branding';
 
+import { BrandLogo } from '../BrandLogo';
+
 export const Header = () => {
-  const { role, user } = useAuth();
+  const { role, user, refreshAuth } = useAuth();
   const { tenant } = useTenant();
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +59,7 @@ export const Header = () => {
   const handleLogout = async () => {
     try {
       await authService.logout();
+      await refreshAuth();
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -77,9 +80,7 @@ export const Header = () => {
     <header className="bg-black/80 backdrop-blur-2xl border-b border-white/10 px-4 lg:px-8 py-3.5 flex justify-between items-center shrink-0 sticky top-0 z-50">
       <div className="flex items-center gap-10">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-black shadow-sm transition-all group-hover:scale-105 duration-200">
-            <Cpu className="w-5 h-5 animate-pulse" />
-          </div>
+          <BrandLogo className="w-9 h-9 drop-shadow-md transition-all group-hover:scale-105 duration-200" />
           <div className="hidden min-[450px]:block">
             <h1 className="text-sm font-bold text-white tracking-tight leading-none">
               {BRAND.name}

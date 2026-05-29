@@ -111,6 +111,7 @@ const Login = safeLazy(() => import('./pages/auth/Login').then(m => ({ default: 
 const Register = safeLazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })));
 const ForgotPassword = safeLazy(() => import('./pages/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const Landing = safeLazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
+const BrandIdentity = safeLazy(() => import('./pages/BrandIdentity').then(m => ({ default: m.BrandIdentity })));
 const OnboardingFlow = safeLazy(() => import('./pages/onboarding/OnboardingFlow').then(m => ({ default: m.OnboardingFlow })));
 const PublicStore = safeLazy(() => import('./pages/PublicStore').then(m => ({ default: m.PublicStore })));
 
@@ -182,6 +183,7 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/onboarding" element={<OnboardingFlow />} />
       <Route path="/market" element={<PublicStore tenant={tenant} isLoading={tenantLoading} />} />
+      <Route path="/brand-system" element={<BrandIdentity />} />
       
       <Route
         path="/"

@@ -4,7 +4,7 @@ let cachedTenant: Agency | null = null;
 
 const fallbackAgency: Agency = {
   id: 'fallback-agency-static',
-  name: 'NexusCore Technologies',
+  name: 'NexusCore Network',
   slug: 'nexuscore',
   domain: 'localhost',
   primaryColor: '#10b981',

@@ -128,8 +128,13 @@ async function startServer() {
 
   // Tenant Detection Middleware via PostgreSQL databases first
   app.use(async (req, res, next) => {
-    // Bypass tenant detection for SRE health / metrics endpoints and asset requests
-    const bypassPaths = ["/health", "/live", "/ready", "/metrics", "/favicon.ico"];
+    // Bypass tenant detection for non-API routes, static assets, and SRE endpoints
+    if (!req.path.startsWith("/api")) {
+      return next();
+    }
+
+    // Bypass tenant detection for health / metrics endpoints and asset requests
+    const bypassPaths = ["/health", "/live", "/ready", "/metrics", "/favicon.ico", "/api/health"];
     if (bypassPaths.includes(req.path) || req.path.startsWith("/api/health")) {
       return next();
     }
@@ -536,6 +541,13 @@ async function startServer() {
 
         let supplier;
         if (id) {
+          // Enforce tenant boundary validation on update
+          const existingSupplier = await prisma.supplier.findFirst({
+            where: { id, tenantId: (req as any).agency.id }
+          });
+          if (!existingSupplier) {
+            return res.status(403).json({ error: "Access denied: Supplier not found or tenant boundary violation" });
+          }
           supplier = await prisma.supplier.update({
             where: { id },
             data
@@ -567,6 +579,13 @@ async function startServer() {
     requirePermission('supplier.manage'),
     async (req, res) => {
       try {
+        // Enforce tenant barrier on deletion
+        const supplierToDelete = await prisma.supplier.findFirst({
+          where: { id: req.params.id, tenantId: (req as any).agency.id }
+        });
+        if (!supplierToDelete) {
+          return res.status(403).json({ error: "Access denied: Supplier not found or tenant boundary violation" });
+        }
         await prisma.supplier.delete({
           where: { id: req.params.id }
         });
@@ -679,7 +698,10 @@ async function startServer() {
     requireAuth,
     requireTenant,
     async (req, res) => {
-      const agencyId = req.query.agencyId as string || (req as any).tenantId;
+      let agencyId = (req as any).agency?.id;
+      if ((req as any).user?.role === 'SUPER_ADMIN' && req.query.agencyId) {
+        agencyId = req.query.agencyId as string;
+      }
       if (!agencyId) {
         return res.status(400).json({ error: "agencyId is required" });
       }
@@ -744,7 +766,7 @@ async function startServer() {
     requireTenant,
     requirePermission('ledger.audit'),
     async (req, res) => {
-      const agencyId = (req as any).tenantId;
+      const agencyId = (req as any).agency?.id;
       const { autoHeal } = req.body;
       try {
         const report = await ReconciliationService.runReconciliation(agencyId, !!autoHeal);
@@ -760,10 +782,11 @@ async function startServer() {
   app.get(
     "/api/financial/integrity/alerts",
     requireAuth,
+    requireTenant,
     async (req, res) => {
       try {
         const drifts = await prisma.reconciliationDrift.findMany({
-          where: { status: 'UNRESOLVED' },
+          where: { status: 'UNRESOLVED', tenantId: (req as any).agency.id },
           orderBy: { detectedAt: 'desc' },
           take: 5
         });
@@ -778,7 +801,7 @@ async function startServer() {
   // Webhook Hub Diagnostic API
   app.get("/api/webhooks/logs", requireAuth, requireTenant, async (req, res) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = (req as any).agency?.id;
       const logs = await prisma.webhookDeliveryLog.findMany({
         where: { tenantId },
         orderBy: { createdAt: 'desc' },
@@ -790,9 +813,24 @@ async function startServer() {
     }
   });
 
+  app.get("/api/webhooks/incoming", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = (req as any).agency?.id;
+      const logs = await prisma.supplierCallback.findMany({
+        where: { supplier: { tenantId } },
+        include: { supplier: true },
+        orderBy: { createdAt: 'desc' },
+        take: 20
+      });
+      res.json({ success: true, logs });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/webhooks/replay/:id", requireAuth, requireTenant, async (req, res) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = (req as any).agency?.id;
       const result = await WebhookService.replayWebhook(req.params.id, tenantId);
       res.json({ success: true, result });
     } catch (err: any) {
@@ -801,6 +839,19 @@ async function startServer() {
   });
 
   // Products Database API (PostgreSQL-backed)
+  app.get("/api/products/public/:tenantId", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const products = await prisma.product.findMany({
+        where: { tenantId, isAvailable: true }
+      });
+      res.json(products);
+    } catch (err) {
+      logger.error({ err }, "Failed to fetch public products");
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
   app.get("/api/products", requireAuth, requireTenant, async (req, res) => {
     try {
       const products = await prisma.product.findMany({
@@ -1063,7 +1114,7 @@ async function startServer() {
     requireTenant,
     requirePermission('ledger.audit'),
     async (req, res) => {
-      const agencyId = (req as any).tenantId;
+      const agencyId = (req as any).agency?.id;
       try {
         const journals = await prisma.ledgerJournal.findMany({
           where: { tenantId: agencyId },
@@ -1079,10 +1130,93 @@ async function startServer() {
     }
   );
 
+  // User Wallet Transactions History
+  app.get("/api/wallets/me/transactions", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = (req as any).agency.id;
+      const uid = (req as any).user?.uid;
+      const role = (req as any).user?.role;
+
+      let wallet;
+      if (role === 'SUPER_ADMIN' || role === 'AGENCY' || role === 'AGENCY_ADMIN') {
+        wallet = await prisma.wallet.findFirst({
+          where: { tenantId }
+        });
+      } else {
+        wallet = await prisma.wallet.findFirst({
+          where: { tenantId, userId: uid }
+        });
+      }
+
+      if (!wallet) {
+        return res.json([]);
+      }
+
+      const entries = await prisma.ledgerEntry.findMany({
+        where: { accountId: wallet.id },
+        include: {
+          journal: true
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+      });
+
+      // Flatten to look like simple transactions for the frontend
+      const txs = entries.map(e => ({
+        id: e.id,
+        amount: Number(e.amount),
+        type: e.type,
+        description: e.journal?.description || e.type,
+        createdAt: e.createdAt,
+        balanceBefore: Number(e.balanceBefore),
+        balanceAfter: Number(e.balanceAfter),
+        journalId: e.journalId
+      }));
+
+      res.json(txs);
+    } catch (err) {
+      console.error("Failed to fetch wallet transactions", err);
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
+  // Orders Database API
+  app.get("/api/orders/track/:identifier", async (req, res) => {
+    try {
+      const { identifier } = req.params;
+      const { tenantId } = req.query; // Optional
+
+      const whereClause: any = {
+        OR: [
+          { id: identifier },
+          { id: { endsWith: identifier } },
+          { targetAccount: identifier }
+        ]
+      };
+      if (tenantId) {
+        whereClause.tenantId = tenantId as string;
+      }
+
+      const order = await prisma.transaction.findFirst({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      res.json(order);
+    } catch (err) {
+      logger.error({ err }, "Failed to track order");
+      res.status(500).json({ error: "Failed to track order" });
+    }
+  });
+
   // Order retrieval API
   app.get("/api/orders", requireAuth, requireTenant, async (req, res) => {
     try {
-      const agencyId = (req as any).tenantId;
+      const agencyId = (req as any).agency?.id;
       const dbTxns = await prisma.transaction.findMany({
         where: {
           tenantId: agencyId
@@ -1131,15 +1265,23 @@ async function startServer() {
   // Order Submission API
   app.post("/api/orders", requireAuth, requireTenant, async (req, res) => {
     try {
-      const agencyId = (req as any).tenantId || req.body.agencyId;
+      const agencyId = (req as any).agency.id;
       const { resellerId, productId, quantity, targetAccount } = req.body;
       
       if (!resellerId || !productId || !quantity || !targetAccount) {
          return res.status(400).json({ error: "Missing required fields" });
       }
 
+      // Check role permissions: standard customers/resellers cannot order using other reseller accounts
+      const userRole = (req as any).user?.role;
+      const uid = (req as any).user?.uid;
+      let finalResellerId = resellerId;
+      if (userRole !== 'SUPER_ADMIN' && userRole !== 'AGENCY' && userRole !== 'AGENCY_ADMIN') {
+        finalResellerId = uid;
+      }
+
       const result = await TransactionManagerService.createOrder({
-        resellerId,
+        resellerId: finalResellerId,
         agencyId,
         productId,
         quantity: Number(quantity),
@@ -1161,12 +1303,26 @@ async function startServer() {
   // Core Fulfillment Pipeline
   app.post(
     "/api/orders/process",
+    requireAuth,
+    requireTenant,
     async (req, res) => {
       const { orderId, agencyId } = req.body;
       if (!orderId || !agencyId)
         return res
           .status(400)
           .json({ error: "orderId and agencyId are required" });
+
+      if (agencyId !== (req as any).agency.id) {
+        return res.status(403).json({ error: "Access denied: Tenant boundary mismatch" });
+      }
+
+      // Check order tenant context
+      const existingOrder = await prisma.transaction.findUnique({
+        where: { id: orderId }
+      });
+      if (!existingOrder || existingOrder.tenantId !== agencyId) {
+        return res.status(404).json({ error: "Order not found or tenant mismatch" });
+      }
 
       console.log(
         `[PIPELINE_ENGINE] Processing Order: ${orderId} on Tenant: ${agencyId}`,
@@ -1242,6 +1398,37 @@ async function startServer() {
           where: { id: orderId }
         });
 
+        // Log the incoming callback
+        if (order?.supplierId) {
+          try {
+            const callbackRecord = await prisma.supplierCallback.create({
+              data: {
+                supplierId: order.supplierId,
+                payload: req.body,
+                isVerified: true
+              },
+              include: { supplier: true }
+            });
+            // Send SSE update
+            const message = `data: ${JSON.stringify({ 
+              event: 'INCOMING_WEBHOOK', 
+              payload: { ...callbackRecord, tenantId: order.tenantId }
+            })}\n\n`;
+            for (const client of sseClients) {
+               // We just broadcast to all connected clients for now
+               // since EventSource doesn't pass headers without polyfill
+               try {
+                 client.write(message);
+               } catch(ex) {
+                 // ignore dead clients
+                 sseClients.delete(client);
+               }
+            }
+          } catch (logErr) {
+            console.error("Failed to log supplier callback:", logErr);
+          }
+        }
+
         if (!order) {
            return res.status(404).json({ error: "Order not found" });
         }
@@ -1299,13 +1486,23 @@ async function startServer() {
   app.post(
     "/api/financial/deposit",
     requireAuth,
+    requireTenant,
+    requirePermission('wallet.write'),
     async (req, res) => {
       try {
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, amount, idempotencyKey, description } = req.body;
 
         if (!walletId || !amount || !idempotencyKey) {
           return res.status(400).json({ error: "walletId, amount and idempotencyKey are required" });
+        }
+
+        // Verify wallet exists and belongs to this tenant
+        const wallet = await prisma.wallet.findFirst({
+          where: { id: walletId, tenantId }
+        });
+        if (!wallet) {
+          return res.status(404).json({ error: "Wallet not found or tenant boundary mismatch" });
         }
 
         const journal = await BalanceManager.depositFunds(
@@ -1327,13 +1524,23 @@ async function startServer() {
   app.post(
     "/api/financial/withdraw",
     requireAuth,
+    requireTenant,
+    requirePermission('wallet.write'),
     async (req, res) => {
       try {
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, amount, idempotencyKey, description } = req.body;
 
         if (!walletId || !amount || !idempotencyKey) {
           return res.status(400).json({ error: "walletId, amount and idempotencyKey are required" });
+        }
+
+        // Verify wallet exists and belongs to this tenant
+        const wallet = await prisma.wallet.findFirst({
+          where: { id: walletId, tenantId }
+        });
+        if (!wallet) {
+          return res.status(404).json({ error: "Wallet not found or tenant boundary mismatch" });
         }
 
         const journal = await BalanceManager.withdrawFunds(
@@ -1356,10 +1563,23 @@ async function startServer() {
   app.post(
     "/api/payment/deposit/qris",
     requireAuth,
+    requireTenant,
     async (req, res) => {
       try {
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, amount, customerName, customerEmail, preferredProvider } = req.body;
+
+        // Ensure user is authorized to perform transactions on this wallet
+        const userRole = (req as any).user?.role;
+        const uid = (req as any).user?.uid;
+        if (userRole !== 'SUPER_ADMIN' && userRole !== 'AGENCY' && userRole !== 'AGENCY_ADMIN') {
+          const wallet = await prisma.wallet.findFirst({
+            where: { id: walletId, userId: uid, tenantId }
+          });
+          if (!wallet) {
+            return res.status(403).json({ error: "Access denied: Wallet does not belong to you or tenant mismatch" });
+          }
+        }
 
         if (!walletId || !amount || !customerName || !customerEmail) {
           return res.status(400).json({ error: "walletId, amount, customerName, and customerEmail are required" });
@@ -1385,10 +1605,23 @@ async function startServer() {
   app.post(
     "/api/payment/deposit/va",
     requireAuth,
+    requireTenant,
     async (req, res) => {
       try {
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, amount, bankCode, customerName, customerEmail, preferredProvider } = req.body;
+
+        // Ensure user is authorized to perform transactions on this wallet
+        const userRole = (req as any).user?.role;
+        const uid = (req as any).user?.uid;
+        if (userRole !== 'SUPER_ADMIN' && userRole !== 'AGENCY' && userRole !== 'AGENCY_ADMIN') {
+          const wallet = await prisma.wallet.findFirst({
+            where: { id: walletId, userId: uid, tenantId }
+          });
+          if (!wallet) {
+            return res.status(403).json({ error: "Access denied: Wallet does not belong to you or tenant mismatch" });
+          }
+        }
 
         if (!walletId || !amount || !bankCode || !customerName || !customerEmail) {
           return res.status(400).json({ error: "walletId, amount, bankCode, customerName, and customerEmail are required" });
@@ -1415,11 +1648,24 @@ async function startServer() {
   app.post(
     "/api/payment/deposit/ewallet",
     requireAuth,
+    requireTenant,
     async (req, res) => {
       try {
         const { EWalletService } = await import("./src/services/payment/EWalletService");
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, amount, walletProvider, phoneNumber, callbackUrl, preferredProvider } = req.body;
+
+        // Ensure user is authorized to perform transactions on this wallet
+        const userRole = (req as any).user?.role;
+        const uid = (req as any).user?.uid;
+        if (userRole !== 'SUPER_ADMIN' && userRole !== 'AGENCY' && userRole !== 'AGENCY_ADMIN') {
+          const wallet = await prisma.wallet.findFirst({
+            where: { id: walletId, userId: uid, tenantId }
+          });
+          if (!wallet) {
+            return res.status(403).json({ error: "Access denied: Wallet does not belong to you or tenant mismatch" });
+          }
+        }
 
         if (!walletId || !amount || !walletProvider || !phoneNumber) {
           return res.status(400).json({ error: "walletId, amount, walletProvider, and phoneNumber are required" });
@@ -1446,11 +1692,24 @@ async function startServer() {
   app.post(
     "/api/payment/withdrawal",
     requireAuth,
+    requireTenant,
     async (req, res) => {
       try {
         const { WithdrawalService } = await import("./src/services/payment/WithdrawalService");
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, amount, bankCode, accountNumber, accountName, description } = req.body;
+
+        // Ensure user is authorized to perform transactions on this wallet
+        const userRole = (req as any).user?.role;
+        const uid = (req as any).user?.uid;
+        if (userRole !== 'SUPER_ADMIN' && userRole !== 'AGENCY' && userRole !== 'AGENCY_ADMIN') {
+          const wallet = await prisma.wallet.findFirst({
+            where: { id: walletId, userId: uid, tenantId }
+          });
+          if (!wallet) {
+            return res.status(403).json({ error: "Access denied: Wallet does not belong to you or tenant mismatch" });
+          }
+        }
 
         if (!walletId || !amount || !bankCode || !accountNumber || !accountName) {
           return res.status(400).json({ error: "walletId, amount, bankCode, accountNumber, and accountName are required" });
@@ -1507,10 +1766,11 @@ async function startServer() {
   app.get(
     "/api/payment/deposit/sync/:id",
     requireAuth,
+    requireTenant,
     async (req, res) => {
       try {
         const { QRISService } = await import("./src/services/payment/QRISService");
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { id } = req.params;
 
         const currentStatus = await QRISService.syncQRISPaymentStatus(tenantId, id);
@@ -1643,10 +1903,12 @@ async function startServer() {
   app.post(
     "/api/financial/settle/initiate",
     requireAuth,
+    requireTenant,
+    requirePermission('wallet.write'),
     async (req, res) => {
       try {
         const { SettlementEngine } = await import("./src/services/financial/SettlementEngine");
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, amount, orderId, idempotencyKey } = req.body;
 
         if (!walletId || !amount || !orderId || !idempotencyKey) {
@@ -1672,10 +1934,12 @@ async function startServer() {
   app.post(
     "/api/financial/settle/commit",
     requireAuth,
+    requireTenant,
+    requirePermission('wallet.write'),
     async (req, res) => {
       try {
         const { SettlementEngine } = await import("./src/services/financial/SettlementEngine");
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { orderId, supplierSettlementAmount, idempotencyKey } = req.body;
 
         if (!orderId || supplierSettlementAmount === undefined || !idempotencyKey) {
@@ -1700,10 +1964,12 @@ async function startServer() {
   app.post(
     "/api/financial/settle/rollback",
     requireAuth,
+    requireTenant,
+    requirePermission('wallet.write'),
     async (req, res) => {
       try {
         const { SettlementEngine } = await import("./src/services/financial/SettlementEngine");
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
         const { walletId, orderId, idempotencyKey, reason } = req.body;
 
         if (!walletId || !orderId || !idempotencyKey) {
@@ -1729,10 +1995,12 @@ async function startServer() {
   app.get(
     "/api/financial/integrity",
     requireAuth,
+    requireTenant,
+    requirePermission('ledger.audit'),
     async (req, res) => {
       try {
         const { FinancialIntegrityService } = await import("./src/services/financial/FinancialIntegrityService");
-        const tenantId = (req as any).agency?.id || "nexuscore-default-tenant";
+        const tenantId = (req as any).agency.id;
 
         const report = await FinancialIntegrityService.performIntegrityAudit(tenantId);
         res.json({ success: true, report });
@@ -1815,11 +2083,49 @@ async function startServer() {
   
   // Start background workers asynchronously
   let stopWorkers: () => Promise<void> = async () => {};
-  startAllWorkers().then((api) => {
+
+  async function warmupTenantCache() {
+    try {
+      logger.info("[WARMUP] Starting tenant cache warmup...");
+      const redis = require('./src/lib/redis').getRedisClient();
+      if (redis.status !== 'ready') {
+        logger.warn("[WARMUP] Redis not ready, skipping warmup");
+        return;
+      }
+      
+      // Fetch popular/recent agencies
+      const tenants = await prisma.tenant.findMany({
+        take: 100,
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      let count = 0;
+      for (const tenant of tenants) {
+        if (tenant.customDomain) {
+          await redis.setex(`tenant:domain:${tenant.customDomain}`, 3600, JSON.stringify(tenant));
+          count++;
+        }
+        if (tenant.slug) {
+          await redis.setex(`tenant:slug:${tenant.slug}`, 3600, JSON.stringify(tenant));
+          count++;
+        }
+      }
+      
+      logger.info(`[WARMUP] Successfully pre-loaded ${count} tenant cache records into Redis.`);
+    } catch (err: any) {
+      logger.error(err, "[WARMUP] Failed to warmup tenant cache");
+    }
+  }
+
+  // Pre-load popular agency configs into Redis
+  await warmupTenantCache();
+
+  try {
+    const api = await startAllWorkers();
     stopWorkers = api.shutdown;
-  }).catch(err => {
+  } catch (err) {
     logger.error({ err }, "Fatal: Failed to start background workers");
-  });
+  }
 
   if (isProd) {
     const distPath = path.join(process.cwd(), "dist");

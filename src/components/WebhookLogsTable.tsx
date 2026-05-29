@@ -84,17 +84,22 @@ export const WebhookLogsTable = () => {
         isOpen={!!pendingReplayId}
         onClose={() => setPendingReplayId(null)}
         title="Confirm Webhook Replay"
-        subtitle="This will re-trigger the webhook delivery using the original payload. Ensure this won't cause duplicate processing in the destination system."
+        subtitle="This will re-trigger the webhook delivery using the original payload. Make sure the receiving system is prepared to handle this request."
         footer={
           <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setPendingReplayId(null)}>Cancel</Button>
-            <Button variant="primary" onClick={() => pendingReplayId && handleReplay(pendingReplayId)}>Confirm Replay</Button>
+            <Button variant="danger" onClick={() => pendingReplayId && handleReplay(pendingReplayId)}>Confirm Replay</Button>
           </div>
         }
       >
-        <div className="flex items-center gap-3 text-rose-400 bg-rose-500/10 p-4 rounded-xl border border-rose-500/20">
-          <AlertTriangle className="w-6 h-6 shrink-0" />
-          <p className="text-xs">Replaying this webhook might result in side effects or duplicate actions in the recipient system. Proceed with caution.</p>
+        <div className="flex flex-col gap-3 text-rose-400 bg-rose-500/10 p-4 rounded-xl border border-rose-500/20">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-500" />
+            <span className="font-semibold text-xs text-rose-200">WARNING: Potential Duplicate Transaction Processing</span>
+          </div>
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            Replaying this webhook will resend the transaction pay-out event or status update. If the destination system has not implemented strict idempotency guards, this action could result in <strong className="text-rose-300">duplicate transaction processing</strong>, double payments, or repetitive ledger credits.
+          </p>
         </div>
       </Modal>
     </div>
