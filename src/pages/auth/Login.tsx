@@ -8,8 +8,10 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { BRAND } from '../../config/branding';
 import { BrandLogo } from '../../components/BrandLogo';
+import { useTranslation } from 'react-i18next';
 
 export const Login = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +34,7 @@ export const Login = () => {
       await refreshAuth();
       navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message || t('auth.authFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +52,7 @@ export const Login = () => {
         // User closed the popup, silently ignore or allow them to use demo 
         return;
       }
-      setError(err.message || 'Google Login failed');
+      setError(err.message || t('auth.googleLoginFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +77,7 @@ export const Login = () => {
             <BrandLogo className="w-14 h-14 mb-6" />
             <h1 className="text-xl font-semibold text-white tracking-tight leading-none">{BRAND.name}</h1>
             <p className="text-[11px] text-slate-500 font-medium tracking-wide uppercase mt-2">
-              Digital Monetization Platform
+              {t('auth.digitalMonetization')}
             </p>
           </div>
 
@@ -92,7 +94,7 @@ export const Login = () => {
 
           <form onSubmit={handleEmailLogin} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="text-[11px] text-slate-400 font-semibold px-1">Email Address</label>
+              <label className="text-[11px] text-slate-400 font-semibold px-1">{t('auth.email')}</label>
               <div className="relative group">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-white transition-colors" />
                 <input 
@@ -108,9 +110,9 @@ export const Login = () => {
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center px-1">
-                <label className="text-[11px] text-slate-400 font-semibold">Password</label>
+                <label className="text-[11px] text-slate-400 font-semibold">{t('auth.password')}</label>
                 <Link to="/forgot-password" title="Recover Access" className="text-[11px] text-slate-500 hover:text-white transition-colors font-semibold">
-                  Forgot?
+                  {t('auth.forgotPassword')}
                 </Link>
               </div>
               <div className="relative group">
@@ -139,13 +141,13 @@ export const Login = () => {
               ) : (
                 <LogIn className="w-4 h-4" />
               )}
-              {isLoading ? 'Verifying...' : 'Sign In'}
+              {isLoading ? t('auth.verifying') : t('auth.signIn')}
             </button>
           </form>
 
           <div className="my-8 flex items-center gap-4">
             <div className="h-px flex-1 bg-white/[0.05]" />
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest shrink-0">or</span>
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest shrink-0">{t('auth.or')}</span>
             <div className="h-px flex-1 bg-white/[0.05]" />
           </div>
 
@@ -156,14 +158,14 @@ export const Login = () => {
             className="w-full h-11 bg-white/[0.02] border border-white/10 rounded-xl text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/[0.05] hover:border-white/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
           >
             <Chrome className="w-4 h-4 text-slate-400" />
-            Continue with Google
+            {t('auth.continueWithGoogle')}
           </button>
 
           <div className="mt-8 text-center border-t border-white/5 pt-6">
             <p className="text-[11px] text-slate-500 font-medium tracking-wide">
-              Don't have an account? {' '}
+              {t('auth.noAccount')} {' '}
               <Link to="/register" className="text-white font-semibold hover:underline transition-colors ml-1">
-                Create Account
+                {t('auth.createAccount')}
               </Link>
             </p>
           </div>
@@ -174,7 +176,7 @@ export const Login = () => {
             © 2026 {BRAND.name} Platform
           </p>
           <p className="text-[10px] text-slate-600 font-medium uppercase tracking-widest mt-1">
-            Certified Secure &bull; SOC2 Type II 
+            {t('auth.certifiedSecure')}
           </p>
         </div>
       </motion.div>

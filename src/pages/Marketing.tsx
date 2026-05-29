@@ -4,8 +4,10 @@ import { DiscountManager } from '../modules/Marketing/DiscountManager';
 import { Sparkles, Megaphone, TrendingUp, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Card } from '../components/ui/Card';
+import { useTranslation } from 'react-i18next';
 
 export const MarketingPage = () => {
+  const { t } = useTranslation();
   const { profile } = useAuth();
 
   if (!profile?.agencyId) return null;
@@ -16,11 +18,11 @@ export const MarketingPage = () => {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h2 className="text-3xl font-semibold text-white tracking-tight">
-              Marketing
+              {t('marketing.title', 'Marketing')}
             </h2>
           </div>
           <p className="text-sm text-slate-500 font-medium pt-1">
-            Manage your promotional campaigns
+            {t('marketing.subtitle', 'Manage your promotional campaigns')}
           </p>
         </div>
       </div>
@@ -31,9 +33,9 @@ export const MarketingPage = () => {
          </div>
          <div className="space-y-6">
             <Card className="p-6 relative overflow-hidden group">
-               <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Active Campaigns</h4>
+               <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-widest mb-2">{t('marketing.activeCampaigns', 'Active Campaigns')}</h4>
                <p className="text-3xl font-semibold text-white tracking-tight mb-4">0</p>
-               <p className="text-[13px] text-slate-400 font-medium leading-relaxed">Create a new discount campaign to engage your customers.</p>
+               <p className="text-[13px] text-slate-400 font-medium leading-relaxed">{t('marketing.createCampaignDesc', 'Create a new discount campaign to engage your customers.')}</p>
             </Card>
 
             <Card className="p-8">
@@ -41,7 +43,7 @@ export const MarketingPage = () => {
                   <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
                     <BarChart3 className="w-4 h-4 text-indigo-400" />
                   </div>
-                  <span className="text-[11px] font-semibold text-white uppercase tracking-widest">Active Streams</span>
+                  <span className="text-[11px] font-semibold text-white uppercase tracking-widest">{t('marketing.activeStreams', 'Active Streams')}</span>
                </div>
                <div className="space-y-4">
                   {[1,2,3].map(i => (
@@ -51,7 +53,7 @@ export const MarketingPage = () => {
                     </div>
                   ))}
                </div>
-               <p className="text-center mt-6 text-[10px] font-semibold text-slate-600 uppercase tracking-widest italic">Aggregation In Progress...</p>
+               <p className="text-center mt-6 text-[10px] font-semibold text-slate-600 uppercase tracking-widest italic">{t('marketing.aggregationInProgress', 'Aggregation In Progress...')}</p>
             </Card>
          </div>
       </div>

@@ -15,8 +15,10 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../utils/cn';
+import { useTranslation } from 'react-i18next';
 
 export const BrandingSettings = () => {
+  const { t } = useTranslation();
   const { tenant } = useTenant();
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -76,10 +78,10 @@ export const BrandingSettings = () => {
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h1 className="text-4xl font-bold text-white uppercase tracking-tight">Identity Matrix</h1>
+          <h1 className="text-4xl font-bold text-white uppercase tracking-tight">{t('branding.identityMatrix')}</h1>
           <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-2 flex items-center gap-2">
             <Palette className="w-3 h-3 text-primary" />
-            White-Label Branding & Visual Protocol Config
+            {t('branding.whiteLabelConfig')}
           </p>
         </div>
       </div>
@@ -90,12 +92,12 @@ export const BrandingSettings = () => {
           <div className="vortex-card p-8 space-y-6">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <Layout className="w-4 h-4" />
-              Core Identity
+              {t('branding.coreIdentity')}
             </h3>
             
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Agency Name</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('branding.agencyName')}</label>
                 <input 
                   type="text"
                   value={formData.name}
@@ -106,7 +108,7 @@ export const BrandingSettings = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Custom Domain</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('branding.customDomain')}</label>
                 <div className="relative">
                   <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
                   <input 
@@ -120,7 +122,7 @@ export const BrandingSettings = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Site Title</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('branding.siteTitle')}</label>
                 <input 
                   type="text"
                   value={formData.siteTitle}
@@ -136,12 +138,12 @@ export const BrandingSettings = () => {
           <div className="vortex-card p-8 space-y-6">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <Zap className="w-4 h-4 text-primary" />
-              Visual Protocol
+              {t('branding.visualProtocol')}
             </h3>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Primary Color</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('branding.primaryColor')}</label>
                 <div className="flex gap-2">
                   <div 
                     className="w-12 h-12 rounded-xl border border-slate-800 shrink-0" 
@@ -156,7 +158,7 @@ export const BrandingSettings = () => {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Secondary Color</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('branding.secondaryColor')}</label>
                 <div className="flex gap-2">
                   <div 
                     className="w-12 h-12 rounded-xl border border-slate-800 shrink-0" 
@@ -173,7 +175,7 @@ export const BrandingSettings = () => {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Brand Asset (LOGO_URL)</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('branding.brandAsset')}</label>
               <div className="relative">
                 <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
                 <input 
@@ -194,17 +196,16 @@ export const BrandingSettings = () => {
             {error ? (
               <div className="flex items-center gap-2 text-red-500 font-medium text-xs uppercase tracking-wider animate-pulse">
                 <AlertCircle className="w-4 h-4" />
-                Error saving
+                {t('branding.errorSaving')}
               </div>
             ) : saved ? (
               <div className="flex items-center gap-2 text-emerald-500 font-medium text-xs uppercase tracking-wider">
                 <CheckCircle2 className="w-4 h-4" />
-                Saved successfully
+                {t('branding.savedSuccessfully')}
               </div>
             ) : (
               <p className="text-xs text-slate-500 font-medium uppercase tracking-wider leading-relaxed max-w-sm">
-                Updating these parameters will affect the global front-facing identity of your Platform. 
-                Changes propagate across regional clusters within 60s.
+                {t('branding.updatingWarning')}
               </p>
             )}
           </div>
@@ -219,7 +220,7 @@ export const BrandingSettings = () => {
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Apply Branding
+                {t('branding.applyBranding')}
               </>
             )}
           </button>
@@ -228,7 +229,7 @@ export const BrandingSettings = () => {
 
       {/* Preview Section */}
       <div className="space-y-6">
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Identity Preview</h3>
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{t('branding.identityPreview')}</h3>
         <div className="vortex-card p-12 flex items-center justify-center bg-slate-950/40 min-h-[300px]">
           <div className="space-y-8 text-center">
             {formData.logoUrl ? (
@@ -243,7 +244,7 @@ export const BrandingSettings = () => {
             )}
             <div className="space-y-4">
               <h2 className="text-3xl font-bold text-white uppercase tracking-tight" style={{ color: formData.primaryColor }}>
-                {formData.siteTitle || formData.name || 'Platform'}
+                {formData.siteTitle || formData.name || t('branding.platform')}
               </h2>
               <div className="flex items-center justify-center gap-4">
                 <div className="w-20 h-2 rounded-full overflow-hidden bg-slate-900 border border-slate-800">
@@ -258,7 +259,7 @@ export const BrandingSettings = () => {
               className="px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-xl transition-all"
               style={{ backgroundColor: formData.primaryColor, color: '#000' }}
             >
-              Initialize Transaction
+              {t('branding.initializeTransaction')}
             </button>
           </div>
         </div>

@@ -839,12 +839,12 @@ async function startServer() {
   });
 
   // Products Database API (PostgreSQL-backed)
+  // Products Database API (PostgreSQL-backed) with Instant Redis Cache fallback
   app.get("/api/products/public/:tenantId", async (req, res) => {
     try {
       const { tenantId } = req.params;
-      const products = await prisma.product.findMany({
-        where: { tenantId, isAvailable: true }
-      });
+      const { CatalogCacheService } = await import("./src/services/products/CatalogCacheService");
+      const products = await CatalogCacheService.getPublicProducts(tenantId);
       res.json(products);
     } catch (err) {
       logger.error({ err }, "Failed to fetch public products");
@@ -887,10 +887,16 @@ async function startServer() {
       return res.status(400).json({ error: "productId is required" });
     }
     try {
+      const tenantId = (req as any).agency.id;
       await prisma.product.updateMany({
-        where: { id: productId, tenantId: (req as any).agency.id },
+        where: { id: productId, tenantId },
         data: { isAvailable: isEnabled }
       });
+
+      // Instantly invalidate the public products catalog cache for this tenant
+      const { CatalogCacheService } = await import("./src/services/products/CatalogCacheService");
+      await CatalogCacheService.invalidateCatalog(tenantId);
+
       res.json({ success: true });
     } catch (error) {
       console.error("Failed to toggle product:", error);
@@ -1838,35 +1844,74 @@ async function startServer() {
           return res.status(401).json({ error: "Invalid cryptographic signature validation" });
         }
 
-        // Prevent dual processing updates
-        if (deposit.status === 'SUCCESS') {
+        // Use a serializable transaction with a FOR UPDATE lock on the Deposit row to guarantee absolute concurrency protection.
+        const lockAndProcess = await prisma.$transaction(async (tx) => {
+          const lockedDeposits = await tx.$queryRaw<any[]>(
+            Prisma.sql`SELECT * FROM "Deposit" WHERE id = ${depositId} FOR UPDATE`
+          );
+          const currentDeposit = lockedDeposits && lockedDeposits.length > 0 ? lockedDeposits[0] : null;
+
+          if (!currentDeposit) {
+            return { action: 'NOT_FOUND' };
+          }
+
+          if (currentDeposit.status === 'SUCCESS') {
+            return { action: 'IDEMPOTENT_SUCCESS' };
+          }
+
+          if (verifyResult.status === 'SETTLED') {
+            // Commit dynamic balanced ledger entry credits
+            const { BalanceManager } = await import("./src/services/financial/BalanceManager");
+            const finalIdempotencyKey = `dep-callback-${depositId}`;
+
+            await BalanceManager.depositFunds(
+              tenantId,
+              currentDeposit.walletId,
+              verifyResult.amount,
+              finalIdempotencyKey,
+              `Deposit Credit paid via ${providerKey.toUpperCase()} [ID: ${verifyResult.referenceId || depositId}]`
+            );
+
+            // Commit status updates
+            await tx.deposit.update({
+              where: { id: depositId },
+              data: {
+                status: 'SUCCESS',
+                paymentRef: verifyResult.referenceId || depositId,
+              },
+            });
+
+            return { action: 'PROCESSED_SUCCESS', walletId: currentDeposit.walletId };
+          } else if (verifyResult.status === 'EXPIRED') {
+            await tx.deposit.update({
+              where: { id: depositId },
+              data: { status: 'EXPIRED' },
+            });
+            return { action: 'PROCESSED_EXPIRED' };
+          } else if (verifyResult.status === 'FAILED') {
+            await tx.deposit.update({
+              where: { id: depositId },
+              data: { status: 'FAILED' },
+            });
+            return { action: 'PROCESSED_FAILED' };
+          }
+
+          return { action: 'NO_ACTION' };
+        }, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable
+        });
+
+        if (lockAndProcess.action === 'NOT_FOUND') {
+          return res.status(404).json({ error: "Deposit transaction record not found" });
+        }
+
+        if (lockAndProcess.action === 'IDEMPOTENT_SUCCESS') {
           logger.info({ depositId }, "Idempotent payment callback detected: already completed successfully, replying 200 OK.");
           return res.json({ success: true, message: "Duplicate payment signal resolved silently." });
         }
 
-        if (verifyResult.status === 'SETTLED') {
-          // Commit dynamic balanced ledger entry credits
-          const { BalanceManager } = await import("./src/services/financial/BalanceManager");
-          const finalIdempotencyKey = `dep-callback-${depositId}`;
-
-          await BalanceManager.depositFunds(
-            tenantId,
-            deposit.walletId,
-            verifyResult.amount,
-            finalIdempotencyKey,
-            `Deposit Credit paid via ${providerKey.toUpperCase()} [ID: ${verifyResult.referenceId || depositId}]`
-          );
-
-          // Commit status updates
-          await prisma.deposit.update({
-            where: { id: depositId },
-            data: {
-              status: 'SUCCESS',
-              paymentRef: verifyResult.referenceId || depositId,
-            },
-          });
-
-          logger.info({ depositId, walletId: deposit.walletId }, "SaaS billing deposit finalized. Balance credited via Ledger ledger entries.");
+        if (lockAndProcess.action === 'PROCESSED_SUCCESS') {
+          logger.info({ depositId, walletId: lockAndProcess.walletId }, "SaaS billing deposit finalized. Balance credited via Ledger ledger entries.");
 
           // Record Success Metrics inside Redis
           try {
@@ -1877,17 +1922,9 @@ async function startServer() {
           } catch {}
 
           return res.json({ success: true, message: "Payment processed successfully" });
-        } else if (verifyResult.status === 'EXPIRED') {
-          await prisma.deposit.update({
-            where: { id: depositId },
-            data: { status: 'EXPIRED' },
-          });
+        } else if (lockAndProcess.action === 'PROCESSED_EXPIRED') {
           return res.json({ success: true, message: "Logged as EXPIRED" });
-        } else if (verifyResult.status === 'FAILED') {
-          await prisma.deposit.update({
-            where: { id: depositId },
-            data: { status: 'FAILED' },
-          });
+        } else if (lockAndProcess.action === 'PROCESSED_FAILED') {
           return res.json({ success: true, message: "Logged as FAILED" });
         }
 
@@ -2048,7 +2085,8 @@ async function startServer() {
       await prisma.$queryRaw`SELECT 1`;
       
       // 2. Redis Check
-      const redis = require('./src/lib/redis').getRedisClient();
+      const { getRedisClient } = await import('./src/lib/redis');
+      const redis = getRedisClient();
       if (redis.status !== 'ready') {
         throw new Error('Redis is not ready');
       }
@@ -2087,7 +2125,8 @@ async function startServer() {
   async function warmupTenantCache() {
     try {
       logger.info("[WARMUP] Starting tenant cache warmup...");
-      const redis = require('./src/lib/redis').getRedisClient();
+      const { getRedisClient } = await import('./src/lib/redis');
+      const redis = getRedisClient();
       if (redis.status !== 'ready') {
         logger.warn("[WARMUP] Redis not ready, skipping warmup");
         return;

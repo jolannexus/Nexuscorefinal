@@ -14,8 +14,10 @@ import { motion } from 'motion/react';
 import { useOrders } from '../../hooks/useOrders';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 export const OrderHistory = () => {
+  const { t } = useTranslation();
   const { orders, loading, retryOrder } = useOrders();
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ export const OrderHistory = () => {
   };
 
   if (loading && !orders.length) {
-    return <div className="h-48 flex items-center justify-center text-slate-500 text-xs font-semibold">Loading transactions...</div>;
+    return <div className="h-48 flex items-center justify-center text-slate-500 text-xs font-semibold">{t('orders.loading')}</div>;
   }
 
   return (
@@ -39,28 +41,28 @@ export const OrderHistory = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
           <ClipboardList className="w-4 h-4 text-emerald-500" />
-          Recent Transactions
+          {t('orders.recentTransactions')}
         </h2>
-        <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">{orders.length} RECORDS</span>
+        <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">{orders.length} {t('orders.records')}</span>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl w-full">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-900">
-              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider">Transaction ID</th>
-              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider">Destination</th>
-              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider">Status</th>
-              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider">Timestamp</th>
-              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider text-right">Amount</th>
+              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider flex-shrink-0">ID</th>
+              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider truncate max-w-xs">{t('orders.identity')}</th>
+              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider w-24">{t('orders.status')}</th>
+              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider">Waktu</th>
+              <th className="px-5 py-3 text-xs font-bold uppercase text-slate-500 tracking-wider text-right">{t('orders.amount')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/50 font-sans">
             {orders.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-5 py-20 text-center flex flex-col items-center justify-center gap-2">
-                  <span className="text-sm text-slate-400 font-bold uppercase tracking-wider">No completed orders</span>
-                  <span className="text-xs text-slate-500 font-medium">Orders processed via API will appear here.</span>
+                  <span className="text-sm text-slate-400 font-bold uppercase tracking-wider">{t('orders.noTransactions')}</span>
+                  <span className="text-xs text-slate-500 font-medium opacity-0 hidden"></span>
                 </td>
               </tr>
             ) : (

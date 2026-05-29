@@ -7,8 +7,10 @@ import { motion } from 'motion/react';
 import { Role } from '../../types/index';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
+import { useTranslation } from 'react-i18next';
 
 export const Register = () => {
+  const { t } = useTranslation();
   const { tenant } = useTenant();
   const { refreshAuth } = useAuth();
   const [email, setEmail] = useState('');
@@ -28,7 +30,7 @@ export const Register = () => {
       await refreshAuth();
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      setError(err.message || t('auth.registrationFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -63,10 +65,10 @@ export const Register = () => {
               )}
             </div>
             <h1 className="text-xl font-bold text-white tracking-tight">
-              {tenant ? `${tenant.name} Join` : 'Create Workspace'}
+              {tenant ? `${tenant.name} ${t('auth.join')}` : t('auth.createWorkspace')}
             </h1>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              {tenant ? `Enterprise Onboarding` : 'Digital Monetization Platform'}
+              {tenant ? t('auth.enterpriseOnboarding') : t('auth.digitalMonetization')}
             </p>
           </div>
 
@@ -79,7 +81,7 @@ export const Register = () => {
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">Email Address</label>
+              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">{t('auth.email')}</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
@@ -94,7 +96,7 @@ export const Register = () => {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">Password</label>
+              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">{t('auth.password')}</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
@@ -110,7 +112,7 @@ export const Register = () => {
 
             {!tenant && (
               <div className="space-y-1.5">
-                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">Account Type</label>
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">{t('auth.accountType')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['AGENCY', 'RESELLER'] as Role[]).map((r) => (
                     <button 
@@ -124,7 +126,7 @@ export const Register = () => {
                           : "bg-slate-950 border-slate-800 text-slate-500"
                       )}
                     >
-                      {r === 'AGENCY' ? 'Agency' : 'Reseller'}
+                      {r === 'AGENCY' ? t('auth.agency') : t('auth.reseller')}
                     </button>
                   ))}
                 </div>
@@ -140,14 +142,14 @@ export const Register = () => {
               )}
             >
               <UserPlus className="w-4 h-4" />
-              {isLoading ? 'Activating...' : 'Launch Workspace'}
+              {isLoading ? t('auth.activating') : t('auth.launchWorkspace')}
             </button>
           </form>
 
           <div className="mt-8 text-center text-xs text-slate-500 font-medium">
-            Already have an account? {' '}
+            {t('auth.haveAccount')} {' '}
             <Link to="/login" className="text-primary font-bold hover:text-white transition-colors ml-2">
-              Sign In
+              {t('auth.signIn')}
             </Link>
           </div>
         </div>

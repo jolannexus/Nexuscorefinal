@@ -3,8 +3,10 @@ import { ResellerModule } from '../modules/resellers/ResellerModule';
 import { TransactionList } from '../modules/billing/TransactionList';
 import { Users, Search, Filter, TrendingUp, Award, BarChart3, ArrowRight } from 'lucide-react';
 import { Card } from '../components/ui/Card';
+import { useTranslation } from 'react-i18next';
 
 export const ResellersPage = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'leaderboard'>('overview');
 
   return (
@@ -12,9 +14,9 @@ export const ResellersPage = () => {
       {/* Header */}
       <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-semibold text-white tracking-tight">Partner Network</h1>
+          <h1 className="text-3xl lg:text-4xl font-semibold text-white tracking-tight">{t('resellers.title')}</h1>
           <p className="text-[13px] text-slate-500 font-medium mt-2 flex items-center gap-2">
-            Manage your network of partners and distributors
+            {t('resellers.subtitle')}
           </p>
         </div>
         
@@ -25,7 +27,7 @@ export const ResellersPage = () => {
               activeTab === 'overview' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-white'
             }`}
           >
-            Overview
+            {t('resellers.overview')}
           </button>
           <button 
             onClick={() => setActiveTab('performance')}
@@ -33,7 +35,7 @@ export const ResellersPage = () => {
               activeTab === 'performance' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-white'
             }`}
           >
-            Performance
+            {t('resellers.performance')}
           </button>
           <button 
             onClick={() => setActiveTab('leaderboard')}
@@ -41,7 +43,7 @@ export const ResellersPage = () => {
                activeTab === 'leaderboard' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-white'
             }`}
           >
-            Leaderboard
+            {t('resellers.leaderboard')}
           </button>
         </div>
       </div>
@@ -57,7 +59,7 @@ export const ResellersPage = () => {
                 </div>
                 <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded uppercase tracking-widest">+12%</span>
               </div>
-              <div className="text-[11px] text-slate-500 mb-1 font-semibold uppercase tracking-widest">Active Partners</div>
+              <div className="text-[11px] text-slate-500 mb-1 font-semibold uppercase tracking-widest">{t('resellers.activePartners')}</div>
               <div className="text-2xl font-semibold text-white tracking-tight">42</div>
             </Card>
             <Card className="px-5 py-4">
@@ -67,7 +69,7 @@ export const ResellersPage = () => {
                 </div>
                 <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded uppercase tracking-widest">+5.2%</span>
               </div>
-              <div className="text-[11px] text-slate-500 mb-1 font-semibold uppercase tracking-widest">Total Generated Volume</div>
+              <div className="text-[11px] text-slate-500 mb-1 font-semibold uppercase tracking-widest">{t('resellers.totalVolume')}</div>
               <div className="text-2xl font-semibold text-white tracking-tight">IDR 1.2B</div>
             </Card>
             <Card className="px-5 py-4">
@@ -76,7 +78,7 @@ export const ResellersPage = () => {
                   <BarChart3 className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <div className="text-[11px] text-slate-500 mb-1 font-semibold uppercase tracking-widest">Avg. Partner Margin</div>
+              <div className="text-[11px] text-slate-500 mb-1 font-semibold uppercase tracking-widest">{t('resellers.avgMargin')}</div>
               <div className="text-2xl font-semibold text-emerald-400 tracking-tight">18.5%</div>
             </Card>
             <Card className="px-5 py-4 bg-white/[0.02]">
@@ -85,8 +87,8 @@ export const ResellersPage = () => {
                   <ArrowRight className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">Branding Panel</div>
-                  <div className="text-[11px] text-slate-500">Customize portal</div>
+                  <div className="text-sm font-semibold text-white">{t('resellers.brandingPanel')}</div>
+                  <div className="text-[11px] text-slate-500">{t('resellers.customizePortal')}</div>
                 </div>
               </div>
             </Card>
@@ -97,7 +99,7 @@ export const ResellersPage = () => {
               <ResellerModule />
             </div>
             <div className="space-y-6">
-               <Card title="Live Activity" subtitle="Network transactions">
+               <Card title={t('resellers.liveActivity')} subtitle={t('resellers.networkTransactions')}>
                   <TransactionList />
                </Card>
             </div>
@@ -108,7 +110,7 @@ export const ResellersPage = () => {
       {activeTab === 'performance' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             <Card title="Monthly Volume Trend" subtitle="Aggregate partner transaction volume" className="min-h-[300px]">
+             <Card title={t('resellers.monthlyVolumeTrend')} subtitle={t('resellers.monthlyVolumeTrendSub')} className="min-h-[300px]">
                <div className="h-full flex items-center justify-center pt-8 pb-4">
                  <div className="w-full flex items-end justify-between h-48 px-4 gap-2">
                    {[40, 60, 45, 80, 55, 90, 75, 100].map((h, i) => (
@@ -121,12 +123,12 @@ export const ResellersPage = () => {
                  </div>
                </div>
              </Card>
-             <Card title="Commission Distribution" subtitle="Earnings breakdown across tiers" className="min-h-[300px]">
+             <Card title={t('resellers.commissionDistribution')} subtitle={t('resellers.commissionDistributionSub')} className="min-h-[300px]">
                 <div className="space-y-6 mt-6">
                   {[
-                    { label: 'PLATINUM PARTNERS', value: 68, color: 'bg-indigo-500' },
-                    { label: 'GOLD PARTNERS', value: 24, color: 'bg-amber-500' },
-                    { label: 'SILVER PARTNERS', value: 8, color: 'bg-slate-400' }
+                    { label: t('resellers.platinumPartners'), value: 68, color: 'bg-indigo-500' },
+                    { label: t('resellers.goldPartners'), value: 24, color: 'bg-amber-500' },
+                    { label: t('resellers.silverPartners'), value: 8, color: 'bg-slate-400' }
                   ].map(stat => (
                     <div key={stat.label} className="space-y-2">
                        <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider">
@@ -148,8 +150,8 @@ export const ResellersPage = () => {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
            <Card className="p-0 overflow-hidden">
               <div className="p-6 border-b border-white/5">
-                 <h3 className="text-lg font-semibold text-white">Top Performing Partners</h3>
-                 <p className="text-[13px] text-slate-500 mt-1">Ranking based on trailing 30-day volume</p>
+                 <h3 className="text-lg font-semibold text-white">{t('resellers.topPerforming')}</h3>
+                 <p className="text-[13px] text-slate-500 mt-1">{t('resellers.rankingSubtitle')}</p>
               </div>
               <div className="divide-y divide-white/5">
                 {[

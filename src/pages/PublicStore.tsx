@@ -31,6 +31,7 @@ import { cn } from '../utils/cn';
 import { useTenant } from '../contexts/TenantContext';
 import { diagnostics } from '../utils/diagnostics';
 import { nexusApi } from '../apiService';
+import { useTranslation, Trans } from 'react-i18next';
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Games': Gamepad2,
@@ -40,6 +41,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any, isLoading: boolean }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   // const { tenant, isLoading: tenantLoading } = useTenant(); // REMOVED
   const [products, setProducts] = useState<Product[]>([]);
@@ -196,15 +198,15 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
                 "text-xs font-bold uppercase tracking-wider",
                 storeBrand.isCustom ? "text-slate-400" : "text-primary"
               )}>
-                {storeBrand.isCustom ? "Official Store" : "Game Store"}
+                {storeBrand.isCustom ? t('store.officialStore', "Official Store") : t('store.gameStore', "Game Store")}
               </span>
             </div>
           </div>
           <div className="hidden md:flex flex-wrap items-center gap-6 text-xs font-bold uppercase tracking-widest text-slate-400">
-            <button onClick={() => scrollTo('catalog')} className="hover:text-white transition-colors">Catalog</button>
+            <button onClick={() => scrollTo('catalog')} className="hover:text-white transition-colors">{t('store.catalog', "Catalog")}</button>
             <button onClick={() => setIsTrackOrderOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-slate-800 rounded-full hover:bg-white hover:text-slate-900 transition-all text-white">
               <Search className="w-3.5 h-3.5" />
-              Track Order
+              {t('store.trackOrder', "Track Order")}
             </button>
           </div>
         </div>
@@ -224,7 +226,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: storeBrand.primaryColor }}></span>
               <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: storeBrand.primaryColor }}></span>
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300">Instant Delivery & 100% Secure</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300">{t('store.badgeFeature', "Instant Delivery & 100% Secure")}</span>
           </motion.div>
           
           <motion.h1 
@@ -233,9 +235,9 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
             transition={{ delay: 0.1, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.9]"
           >
-            Level Up Your <br className="hidden md:block" />
+            {t('store.heroTitle1', "Level Up Your")} <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-600">
-              Gaming Experience
+              {t('store.heroTitle2', "Gaming Experience")}
             </span>
           </motion.h1>
           
@@ -245,10 +247,12 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
              transition={{ delay: 0.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
              className="text-slate-400 max-w-2xl mx-auto text-lg md:text-2xl font-medium leading-relaxed tracking-tight"
           >
-            Welcome to <span className="text-white font-bold">{storeBrand.name}</span>. The fastest and most reliable way to top up your favorite games and digital vouchers.
+            <Trans i18nKey="store.heroDesc" values={{ brandName: storeBrand.name }}>
+              Welcome to <span className="text-white font-bold">{storeBrand.name}</span>. The fastest and most reliable way to top up your favorite games and digital vouchers.
+            </Trans>
           </motion.p>
           
-          <motion.div 
+           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.8 }}
@@ -259,14 +263,14 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
                 className="group relative px-8 py-5 text-slate-950 font-black uppercase tracking-widest text-sm rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_60px_rgba(255,255,255,0.2)] flex items-center gap-3 overflow-hidden"
                 style={{ backgroundColor: storeBrand.primaryColor }}
               >
-               <span className="relative z-10 flex items-center gap-2">Top Up Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
+               <span className="relative z-10 flex items-center gap-2">{t('store.topUpNow', "Top Up Now")} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
              </button>
              <button 
                 onClick={() => scrollTo('catalog')} 
                 className="group px-8 py-5 bg-slate-900 border border-slate-800 text-white font-bold uppercase tracking-widest text-sm rounded-2xl hover:bg-slate-800 hover:border-slate-700 transition-all flex items-center gap-3"
               >
                <Gamepad2 className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
-               View Catalog
+               {t('store.viewCatalog', "View Catalog")}
              </button>
           </motion.div>
         </div>
@@ -283,15 +287,15 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-slate-900/10 to-transparent mix-blend-overlay opacity-50 group-hover:opacity-100 transition-opacity duration-700" style={{ background: `linear-gradient(to bottom right, ${storeBrand.primaryColor}33, transparent)` }} />
             <div className="absolute top-0 right-0 p-8 md:p-10">
-              <div className="px-5 py-2 bg-slate-950/80 rounded-full border border-slate-800 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 backdrop-blur-md">Flash Sale</div>
+              <div className="px-5 py-2 bg-slate-950/80 rounded-full border border-slate-800 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 backdrop-blur-md">{t('store.flashSale', "Flash Sale")}</div>
             </div>
             
             <div className="relative z-10 space-y-6 max-w-xl md:mt-16">
               <h3 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[1]">
-                Epic <br />
-                <span style={{ color: storeBrand.primaryColor }}>Games & Deals.</span>
+                {t('store.promoTitle1', "Epic")} <br />
+                <span style={{ color: storeBrand.primaryColor }}>{t('store.promoTitle2', "Games & Deals.")}</span>
               </h3>
-              <p className="text-slate-400 text-base md:text-xl font-medium leading-relaxed max-w-lg">Get the best prices for your favorite games. Fast and secure top-up directly to your game account.</p>
+              <p className="text-slate-400 text-base md:text-xl font-medium leading-relaxed max-w-lg">{t('store.promoDesc', "Get the best prices for your favorite games. Fast and secure top-up directly to your game account.")}</p>
             </div>
           </motion.div>
 
@@ -305,9 +309,9 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
                  <Lock className="w-10 h-10 text-slate-700 group-hover:text-emerald-400 transition-colors duration-500" />
                </div>
                <div className="relative z-10 space-y-3">
-                 <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Secure Payment</div>
-                 <h4 className="text-2xl font-bold text-white tracking-tight">100% Safe</h4>
-                 <p className="text-slate-500 text-sm font-medium leading-relaxed">Your transactions are protected with enterprise-grade encryption.</p>
+                 <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">{t('store.secure1Title', "Secure Payment")}</div>
+                 <h4 className="text-2xl font-bold text-white tracking-tight">{t('store.secure1Subtitle', "100% Safe")}</h4>
+                 <p className="text-slate-500 text-sm font-medium leading-relaxed">{t('store.secure1Desc', "Your transactions are protected with enterprise-grade encryption.")}</p>
                </div>
             </div>
 
@@ -317,9 +321,9 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
                  <Zap className="w-10 h-10 text-slate-700 group-hover:text-white transition-colors duration-500" />
                </div>
                <div className="relative z-10 space-y-3">
-                 <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Fast Delivery</div>
-                 <h4 className="text-2xl font-bold text-white tracking-tight">Instant Top-Up</h4>
-                 <p className="text-slate-500 text-sm font-medium leading-relaxed">Items and vouchers are credited to your account instantly.</p>
+                 <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">{t('store.fast1Title', "Fast Delivery")}</div>
+                 <h4 className="text-2xl font-bold text-white tracking-tight">{t('store.fast1Subtitle', "Instant Top-Up")}</h4>
+                 <p className="text-slate-500 text-sm font-medium leading-relaxed">{t('store.fast1Desc', "Items and vouchers are credited to your account instantly.")}</p>
                </div>
             </div>
           </motion.div>
@@ -335,7 +339,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-primary transition-colors" />
               <input 
                 type="text" 
-                placeholder="Find game, product name, or SKU..."
+                placeholder={t('store.searchCatalogPlaceholder', "Find game, product name, or SKU...")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-slate-900/40 border border-slate-800 rounded-3xl pl-16 pr-6 py-6 text-sm font-medium outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all"
@@ -403,7 +407,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
 
                 <div className="mt-8 pt-4 border-t border-slate-800">
                   <div className="space-y-0.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em]">Starting From</span>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em]">{t('store.startingFrom', "Starting From")}</span>
                     <div className="text-sm md:text-xl font-mono font-bold text-white tracking-tight">
                       Rp {p.sellingPrice.toLocaleString()}
                     </div>
@@ -424,8 +428,8 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
               <ShieldCheck className="w-8 h-8" style={{ color: storeBrand.primaryColor }} />
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">Cryptographic Security</h4>
-              <p className="text-sm font-medium text-slate-500 max-w-[250px]">Secure encrypted tunnel. Double-ledger validation for every transaction.</p>
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">{t('store.cryptoSecurity', "Cryptographic Security")}</h4>
+              <p className="text-sm font-medium text-slate-500 max-w-[250px]">{t('store.cryptoSecurityDesc', "Secure encrypted tunnel. Double-ledger validation for every transaction.")}</p>
             </div>
           </div>
           <div className="flex flex-col items-center text-center gap-5">
@@ -433,8 +437,8 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
               <Clock className="w-8 h-8" style={{ color: storeBrand.primaryColor }} />
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">Zero Latency</h4>
-              <p className="text-sm font-medium text-slate-500 max-w-[250px]">Fulfillment operations processed within milliseconds globally.</p>
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">{t('store.zeroLatency', "Zero Latency")}</h4>
+              <p className="text-sm font-medium text-slate-500 max-w-[250px]">{t('store.zeroLatencyDesc', "Fulfillment operations processed within milliseconds globally.")}</p>
             </div>
           </div>
           <div className="flex flex-col items-center text-center gap-5">
@@ -442,8 +446,8 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
               <Zap className="w-8 h-8" style={{ color: storeBrand.primaryColor }} />
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">Global Scalability</h4>
-              <p className="text-sm font-medium text-slate-500 max-w-[250px]">Dynamic inventory synchronized across multiple redundant nodes.</p>
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">{t('store.globalScalability', "Global Scalability")}</h4>
+              <p className="text-sm font-medium text-slate-500 max-w-[250px]">{t('store.globalScalabilityDesc', "Dynamic inventory synchronized across multiple redundant nodes.")}</p>
             </div>
           </div>
         </div>
@@ -747,14 +751,14 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
             onClick={() => scrollTo('home')}
           >
              <Home className="w-5 h-5" />
-             <span className="text-xs font-bold uppercase tracking-wider">Home</span>
+             <span className="text-xs font-bold uppercase tracking-wider">{t('store.homeTab', "Home")}</span>
           </button>
           <button 
             className="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors"
             onClick={() => scrollTo('catalog')}
           >
              <LayoutGrid className="w-5 h-5" />
-             <span className="text-xs font-bold uppercase tracking-wider">Catalog</span>
+             <span className="text-xs font-bold uppercase tracking-wider">{t('store.catalogTab', "Catalog")}</span>
           </button>
           <div 
             className="w-12 h-12 rounded-3xl -mt-10 flex items-center justify-center shadow-lg border-4 border-slate-950 cursor-pointer"
@@ -768,7 +772,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
             onClick={() => setIsTrackOrderOpen(true)}
           >
              <History className="w-5 h-5" />
-             <span className="text-[10px] font-bold uppercase tracking-wider">Track</span>
+             <span className="text-[10px] font-bold uppercase tracking-wider">{t('store.trackTab', "Track")}</span>
           </button>
           <button 
             className="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors"
@@ -777,7 +781,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
             }}
           >
              <ShieldCheck className="w-5 h-5" />
-             <span className="text-[10px] font-bold uppercase tracking-wider">Support</span>
+             <span className="text-[10px] font-bold uppercase tracking-wider">{t('store.supportTab', "Support")}</span>
           </button>
         </div>
       </div>

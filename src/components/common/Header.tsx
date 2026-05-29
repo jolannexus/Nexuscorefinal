@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   ShieldCheck, 
   Activity, 
@@ -34,8 +35,10 @@ import { authService } from '../../services/authService';
 import { BRAND } from '../../config/branding';
 
 import { BrandLogo } from '../BrandLogo';
+import { LanguageSelector } from '../LanguageSelector';
 
 export const Header = () => {
+  const { t } = useTranslation();
   const { role, user, refreshAuth } = useAuth();
   const { tenant } = useTenant();
   const location = useLocation();
@@ -67,13 +70,13 @@ export const Header = () => {
   };
 
   const navItems = [
-    { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { label: 'Transactions', path: '/history', icon: Activity },
-    { label: 'Providers', path: '/suppliers', icon: Cpu, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN', 'AGENCY_SUPPLIER_ADMIN'] },
-    { label: 'Resellers', path: '/resellers', icon: Users, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
-    { label: 'Products', path: '/catalog', icon: Package, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
-    { label: 'Settings', path: '/system', icon: Settings, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
-    { label: 'Ops Desk', path: '/operations', icon: Terminal, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
+    { label: t('navigation.dashboard', 'Dasbor'), path: '/', icon: LayoutDashboard },
+    { label: t('navigation.transactions', 'Transaksi'), path: '/history', icon: Activity },
+    { label: t('navigation.providers', 'Penyedia'), path: '/suppliers', icon: Cpu, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN', 'AGENCY_SUPPLIER_ADMIN'] },
+    { label: t('navigation.resellers', 'Penjual'), path: '/resellers', icon: Users, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
+    { label: t('navigation.products', 'Produk'), path: '/catalog', icon: Package, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
+    { label: t('navigation.settings', 'Pengaturan'), path: '/system', icon: Settings, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
+    { label: t('navigation.ops', 'Pusat Operasional'), path: '/operations', icon: Terminal, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
   ];
 
   return (
@@ -136,7 +139,8 @@ export const Header = () => {
           </div>
 
           <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-white/5">
-             <div className="flex flex-col text-right">
+             <LanguageSelector />
+             <div className="flex flex-col text-right pl-3 border-l border-white/5">
                 <span className="text-[11px] text-white font-medium">{user?.email?.split('@')[0]}</span>
                 <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest">{role?.replace('_', ' ')}</span>
              </div>

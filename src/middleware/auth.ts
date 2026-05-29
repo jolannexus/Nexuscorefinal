@@ -161,11 +161,10 @@ export const verifyWebhookSignature = (secretEnvKey: string) => {
          ? signature.split('=')[1] 
          : signature;
 
-       // Use timingSafeEqual to prevent timing attacks
-       const isMatch = crypto.timingSafeEqual(
-         Buffer.from(computedSignature, 'utf8'),
-         Buffer.from(providedHex as string, 'utf8')
-       );
+       // Use timingSafeEqual to prevent timing attacks safely
+       const compBuf = Buffer.from(computedSignature, 'utf8');
+       const provBuf = Buffer.from(providedHex as string, 'utf8');
+       const isMatch = compBuf.length === provBuf.length && crypto.timingSafeEqual(compBuf, provBuf);
 
        if (!isMatch) {
          console.warn(`[Webhook Security] Signature mismatch. Computed: ${computedSignature}, Provided: ${providedHex}`);

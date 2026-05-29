@@ -39,6 +39,18 @@ export class BillingService {
     if (!tx.agencyId) throw new Error('Missing agencyId in transaction');
 
     return await prisma.$transaction(async (prismaTx) => {
+      // 0. Safely acquire FOR UPDATE lock of the Deposit row to verify its status in absolute isolation
+      const lockedDeposits = await prismaTx.$queryRaw<any[]>(
+        Prisma.sql`SELECT * FROM "Deposit" WHERE id = ${tx.id} FOR UPDATE`
+      );
+      const deposit = lockedDeposits && lockedDeposits.length > 0 ? lockedDeposits[0] : null;
+      if (!deposit) {
+        throw new Error('DEPOSIT_NOT_FOUND');
+      }
+      if (deposit.status !== 'PENDING') {
+        throw new Error('DEPOSIT_ALREADY_PROCESSED');
+      }
+
       // 1. Audit and increase actual Balance via PostgreSQL-locked Ledger
       await LedgerService.executeLedgerEntry({
         resellerId: tx.resellerId,
@@ -65,6 +77,18 @@ export class BillingService {
 
   static async rejectDeposit(agencyId: string, id: string) {
     return await prisma.$transaction(async (prismaTx) => {
+      // Safely acquire FOR UPDATE lock of the Deposit row
+      const lockedDeposits = await prismaTx.$queryRaw<any[]>(
+        Prisma.sql`SELECT * FROM "Deposit" WHERE id = ${id} FOR UPDATE`
+      );
+      const deposit = lockedDeposits && lockedDeposits.length > 0 ? lockedDeposits[0] : null;
+      if (!deposit) {
+        throw new Error('DEPOSIT_NOT_FOUND');
+      }
+      if (deposit.status !== 'PENDING') {
+        throw new Error('DEPOSIT_ALREADY_PROCESSED');
+      }
+
       await prismaTx.deposit.update({
         where: { id },
         data: {
@@ -72,6 +96,8 @@ export class BillingService {
           updatedAt: new Date()
         }
       });
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable
     });
   }
 

@@ -4,8 +4,10 @@ import { Zap, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { cn } from '../../utils/cn';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 export const ForgotPassword = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -18,9 +20,9 @@ export const ForgotPassword = () => {
     setMessage(null);
     try {
       await authService.resetPassword(email);
-      setMessage('Recovery link sent. Check your inbox.');
+      setMessage(t('auth.recoveryLinkSent'));
     } catch (err: any) {
-      setError(err.message || 'Failed to send recovery email');
+      setError(err.message || t('auth.failedToSendRecovery'));
     } finally {
       setIsLoading(false);
     }
@@ -46,8 +48,8 @@ export const ForgotPassword = () => {
             <div className="w-12 h-12 bg-amber-600 rounded-2xl flex items-center justify-center shadow-lg mb-4">
               <RefreshCw className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight text-center leading-tight">Password Recovery</h1>
-            <p className="text-xs text-slate-500 font-medium mt-1">Account Security Protocol</p>
+            <h1 className="text-xl font-bold text-white tracking-tight text-center leading-tight">{t('auth.passwordRecovery')}</h1>
+            <p className="text-xs text-slate-500 font-medium mt-1">{t('auth.accountSecurityProtocol')}</p>
           </div>
 
           {error && (
@@ -64,7 +66,7 @@ export const ForgotPassword = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">Email Address</label>
+              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider pl-1">{t('auth.email')}</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
@@ -87,14 +89,14 @@ export const ForgotPassword = () => {
               )}
             >
               <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
-              {isLoading ? 'Processing...' : message ? 'Email Sent' : 'Send Recovery Link'}
+              {isLoading ? t('auth.processing') : message ? t('auth.emailSent') : t('auth.sendRecoveryLink')}
             </button>
           </form>
 
           <div className="mt-8 text-center text-xs text-slate-500 font-medium">
-            Remembered your password? {' '}
+            {t('auth.rememberedPassword')} {' '}
             <Link to="/login" className="text-amber-400 font-bold hover:text-white transition-colors ml-2">
-              Back to Login
+              {t('auth.backToLogin')}
             </Link>
           </div>
         </div>

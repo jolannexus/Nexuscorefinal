@@ -14,6 +14,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useTranslation } from 'react-i18next';
 
 const SECURITY_LOGS = [
   { id: 1, action: 'Login Success', ip: '182.1.44.12', device: 'Chrome on MacOS', time: '2m ago', level: 'info' },
@@ -23,6 +24,8 @@ const SECURITY_LOGS = [
 ];
 
 export const SecurityCenter = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
@@ -32,17 +35,17 @@ export const SecurityCenter = () => {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <h1 className="text-3xl font-semibold text-white tracking-tight leading-none">
-              Security Center
+              {t('security.title')}
             </h1>
           </div>
           <p className="text-[13px] text-slate-500 font-medium tracking-wide flex items-center gap-2 mt-1">
-            Manage your account security
+            {t('security.subtitle')}
           </p>
         </div>
 
         <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-[11px] font-semibold text-emerald-500 uppercase tracking-widest">Account Secured</span>
+          <span className="text-[11px] font-semibold text-emerald-500 uppercase tracking-widest">{t('security.accountSecured')}</span>
         </div>
       </div>
 
@@ -50,7 +53,7 @@ export const SecurityCenter = () => {
         <div className="lg:col-span-2 space-y-8">
           {/* Status Hub */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card title="Multi-Factor Auth" subtitle="Two-Factor Authentication">
+            <Card title={t('security.mfa')} subtitle={t('security.mfaSubtitle')}>
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-4">
@@ -58,21 +61,21 @@ export const SecurityCenter = () => {
                       <Smartphone className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-white tracking-tight">Active Session</h4>
-                      <p className="text-[11px] text-slate-500 font-medium tracking-wide">Authenticator App Linked</p>
+                      <h4 className="text-sm font-semibold text-white tracking-tight">{t('security.activeSession')}</h4>
+                      <p className="text-[11px] text-slate-500 font-medium tracking-wide">{t('security.authenticatorLinked')}</p>
                     </div>
                   </div>
                   <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
-                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Verified</span>
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">{t('security.verified')}</span>
                   </div>
                 </div>
                 <button className="w-full py-2.5 bg-transparent border border-white/10 rounded-xl text-xs font-semibold text-white tracking-wide hover:bg-white/5 hover:border-white/20 transition-all">
-                  Configure Settings
+                  {t('security.configureSettings')}
                 </button>
               </div>
             </Card>
 
-            <Card title="API Access" subtitle="Manage API security settings">
+            <Card title={t('security.apiAccess')} subtitle={t('security.apiAccessSubtitle')}>
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-4">
@@ -80,16 +83,16 @@ export const SecurityCenter = () => {
                       <Key className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-white tracking-tight">IP Whitelisting</h4>
-                      <p className="text-[11px] text-slate-500 font-medium tracking-wide">2 IP Addresses Authorized</p>
+                      <h4 className="text-sm font-semibold text-white tracking-tight">{t('security.ipWhitelisting')}</h4>
+                      <p className="text-[11px] text-slate-500 font-medium tracking-wide">{t('security.ipAuthorized')}</p>
                     </div>
                   </div>
                   <div className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
-                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Selective</span>
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">{t('security.selective')}</span>
                   </div>
                 </div>
                 <button className="w-full py-2.5 bg-transparent border border-white/10 rounded-xl text-xs font-semibold text-white tracking-wide hover:bg-white/5 hover:border-white/20 transition-all">
-                  Manage Whitelists
+                  {t('security.manageWhitelists')}
                 </button>
               </div>
             </Card>
@@ -97,8 +100,8 @@ export const SecurityCenter = () => {
 
           {/* Audit Logs */}
           <Card 
-            title="Recent Activity" 
-            subtitle="Recent security events"
+            title={t('security.recentActivity')} 
+            subtitle={t('security.recentActivitySubtitle')}
           >
             <div className="space-y-3 mt-4">
               {SECURITY_LOGS.map((log) => (

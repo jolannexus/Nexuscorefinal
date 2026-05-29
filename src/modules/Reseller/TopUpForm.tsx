@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Landmark, Send, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { BillingService } from '../../services/billing/billingService';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
@@ -12,6 +13,7 @@ interface TopUpFormProps {
 }
 
 export const TopUpForm = ({ onClose, resellerId, agencyId }: TopUpFormProps) => {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('Bank Transfer');
   const [loading, setLoading] = useState(false);
@@ -40,8 +42,8 @@ export const TopUpForm = ({ onClose, resellerId, agencyId }: TopUpFormProps) => 
     <Modal
       isOpen={true}
       onClose={onClose}
-      title="Financial Uplink"
-      subtitle="Submit capital addition request"
+      title={t('topup.title')}
+      subtitle={t('topup.subtitle')}
       maxWidth="lg"
     >
       {submitted ? (
@@ -50,14 +52,14 @@ export const TopUpForm = ({ onClose, resellerId, agencyId }: TopUpFormProps) => 
             <Send className="w-8 h-8 text-emerald-500" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-white tracking-tight">Request Transmitted</h3>
-            <p className="text-[13px] text-slate-500 font-medium">Awaiting manual verification by HQ</p>
+            <h3 className="text-xl font-semibold text-white tracking-tight">{t('topup.requestTransmitted')}</h3>
+            <p className="text-[13px] text-slate-500 font-medium">{t('topup.awaitingVerification')}</p>
           </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Capital Amount (IDR)</label>
+            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">{t('topup.amountLabel')}</label>
             <input 
               type="number" 
               required
@@ -69,7 +71,7 @@ export const TopUpForm = ({ onClose, resellerId, agencyId }: TopUpFormProps) => 
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Transfer Protocol</label>
+            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">{t('topup.protocolLabel')}</label>
             <div className="grid grid-cols-2 gap-3">
               {['Bank Transfer', 'QRIS', 'E-Wallet', 'Crypto'].map((m) => (
                 <button
@@ -92,7 +94,7 @@ export const TopUpForm = ({ onClose, resellerId, agencyId }: TopUpFormProps) => 
           <div className="p-4 bg-amber-500/[0.02] border border-amber-500/20 rounded-xl flex items-start gap-4">
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-[12px] text-amber-200/70 leading-relaxed font-medium">
-              WARNING: Fraudulent submissions will result in immediate node termination. Please transfer funds before submitting this uplink.
+              {t('topup.warningFraud')}
             </p>
           </div>
 
@@ -104,7 +106,7 @@ export const TopUpForm = ({ onClose, resellerId, agencyId }: TopUpFormProps) => 
               block
               size="lg"
             >
-              Confirm Deposit
+              {loading ? t('topup.submitting') : t('topup.submit')}
             </Button>
           </div>
         </form>

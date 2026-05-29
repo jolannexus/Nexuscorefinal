@@ -99,9 +99,11 @@ const StatCard = ({ label, value, trend, icon: Icon, trendUp }: any) => (
   </Card>
 );
 
+import { useTranslation } from 'react-i18next';
 import { OnboardingWidget } from '../components/dashboard/OnboardingWidget';
 
 export const Dashboard = () => {
+  const { t } = useTranslation();
   diagnostics.logRender('Dashboard');
   const navigate = useNavigate();
   const { user, role, profile } = useAuth();
@@ -416,7 +418,7 @@ export const Dashboard = () => {
               </div>
               <div>
                 <h2 className="text-xl md:text-2xl font-semibold text-white tracking-tight">
-                  Dashboard
+                  {t('dashboard.title')}
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -640,7 +642,7 @@ export const Dashboard = () => {
       >
         <div>
           <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
-            Dashboard
+            {t('dashboard.title')}
           </h2>
           <p className="text-[13px] text-slate-500 font-medium mt-1">
             Status: <span className="text-emerald-500">Online</span> &bull; Agency: {profile?.agencyId || 'Primary'}{role !== 'AGENCY' && role !== 'SUPER_ADMIN' && ` • Role: ${role?.replace('_', ' ')}`}
@@ -678,12 +680,12 @@ export const Dashboard = () => {
            <Card className="p-0 overflow-hidden">
               <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5">
                  <div>
-                    <h3 className="text-lg md:text-xl font-semibold text-white tracking-tight">Revenue & Transaction Volume</h3>
-                    <p className="text-[13px] text-slate-500 font-medium mt-1">Aggregate transaction data across your platform.</p>
+                    <h3 className="text-lg md:text-xl font-semibold text-white tracking-tight">{t('dashboard.revenueAndVolume', 'Revenue & Transaction Volume')}</h3>
+                    <p className="text-[13px] text-slate-500 font-medium mt-1">{t('dashboard.revenueAndVolumeSub', 'Aggregate transaction data across your platform.')}</p>
                  </div>
                  <div className="flex items-center gap-4">
                     <div className="text-right">
-                       <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-widest mb-1.5">Today's Volume</p>
+                       <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-widest mb-1.5">{t('dashboard.todayVolume', "Today's Volume")}</p>
                        <p className="text-3xl font-semibold text-white tracking-tight">IDR 4.2B</p>
                     </div>
                  </div>
@@ -697,8 +699,8 @@ export const Dashboard = () => {
         {/* Live Feed */}
         <div className="lg:col-span-2 space-y-6">
           <Card 
-            title="Recent Transactions" 
-            subtitle="Recent orders across your network"
+            title={t('dashboard.recentTransactions', 'Recent Transactions')} 
+            subtitle={t('dashboard.recentOrdersSub', 'Recent orders across your network')}
             className="h-full border-white/5 bg-white/[0.01]"
           >
             <div className="space-y-3 mt-2">
@@ -751,13 +753,13 @@ export const Dashboard = () => {
         {/* Side Controls */}
         <div className="space-y-6">
           <BalanceAlerts />
-          <Card title="Quick Navigation" subtitle="Dedicated access points">
+          <Card title={t('dashboard.quickNav', 'Quick Navigation')} subtitle={t('dashboard.quickNavSub', 'Dedicated access points')}>
             <div className="grid grid-cols-2 gap-3 mt-4">
               {[
-                { label: 'Market', icon: Package, path: '/catalog' },
-                { label: 'Partners', icon: Users, path: '/resellers' },
-                { label: 'Providers', icon: Cpu, path: '/suppliers' },
-                { label: 'Security', icon: ShieldCheck, path: '/security' }
+                { label: t('navigation.products', 'Market'), icon: Package, path: '/catalog' },
+                { label: t('navigation.resellers', 'Partners'), icon: Users, path: '/resellers' },
+                { label: t('navigation.providers', 'Providers'), icon: Cpu, path: '/suppliers' },
+                { label: t('navigation.settings', 'Security'), icon: ShieldCheck, path: '/security' }
               ].map((link) => (
                 <button 
                   key={link.label}
@@ -773,7 +775,7 @@ export const Dashboard = () => {
             </div>
           </Card>
 
-          <Card title="Recent Activity" subtitle="Your recent actions">
+          <Card title={t('dashboard.recentActivity', 'Recent Activity')} subtitle={t('dashboard.recentActivitySub', 'Your recent actions')}>
              <div className="space-y-4 mt-2">
                 {[
                   { time: '14:22:04', event: 'Password Updated', user: 'You', status: 'Success' },
@@ -796,7 +798,7 @@ export const Dashboard = () => {
 
         {/* Full-width Incoming Webhooks Table */}
         <div className="lg:col-span-3 pb-8">
-           <Card title="Incoming Supplier Webhooks" subtitle="Real-time notifications and callbacks from connected suppliers">
+           <Card title={t('dashboard.incomingWebhooks', 'Incoming Supplier Webhooks')} subtitle={t('dashboard.incomingWebhooksSub', 'Real-time notifications and callbacks from connected suppliers')}>
               <IncomingWebhooksTable />
            </Card>
         </div>
