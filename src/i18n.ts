@@ -14,8 +14,8 @@ i18n
       id: { translation: id },
       en: { translation: en }
     },
-    fallbackLng: 'id', // Indonesian default
-    lng: 'id', // Force default to Indonesian
+    fallbackLng: 'id',
+    lng: localStorage.getItem('i18nextLng') || 'id',
     interpolation: {
       escapeValue: false // React already escapes by default
     }
