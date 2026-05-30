@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { diagnostics } from '../../utils/diagnostics';
 
 import { authService } from '../../services/authService';
+import { QRISPaymentValidator } from './QRISPaymentValidator';
 
 export const TransactionList = () => {
   diagnostics.logRender('TransactionList');
@@ -91,6 +92,11 @@ export const TransactionList = () => {
                   )}>
                     {isDebitLike ? '-' : '+'}{formatAmount(t.amount)}
                   </div>
+                  {t.paymentMethod === 'QRIS' && t.status === 'PENDING' && (
+                    <div className="mt-2 flex justify-end">
+                      <QRISPaymentValidator depositId={t.id} />
+                    </div>
+                  )}
                   <div className="text-xs text-slate-600 font-mono mt-1 uppercase">
                     {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'HH:mm // MMM dd') : 'SYNCING...'}
                   </div>
