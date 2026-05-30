@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { AnnouncementManager } from '../modules/System/AnnouncementManager';
 import { LedgerReconciliationManager } from '../modules/System/LedgerReconciliationManager';
+import { LedgerDriftMonitor } from '../modules/System/LedgerDriftMonitor';
 import { Settings, ShieldCheck, Database, Key, Terminal } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +36,8 @@ export const SystemConfigPage = () => {
           <AnnouncementManager />
           
           <LedgerReconciliationManager />
+
+          <LedgerDriftMonitor />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <Card>

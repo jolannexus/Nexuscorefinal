@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Package, 
   Search, 
@@ -8,7 +8,11 @@ import {
   MoreVertical,
   Layers,
   Database,
-  DollarSign
+  DollarSign,
+  CheckSquare,
+  Square,
+  Loader2,
+  Check
 } from 'lucide-react';
 import { Product } from '../../types';
 import { cn } from '../../utils/cn';
@@ -16,17 +20,93 @@ import { format } from 'date-fns';
 
 interface ProductTableProps {
   products: Product[];
-  onToggle: (id: string, enabled: boolean) => void;
+  onToggle: (id: string, enabled: boolean) => void | Promise<void>;
 }
 
 export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }) => {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isProcessingBulk, setIsProcessingBulk] = useState(false);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map(p => p.id)));
+    }
+  };
+
+  const toggleSelectRow = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkStatusChange = async (enabled: boolean) => {
+    setIsProcessingBulk(true);
+    try {
+      for (const id of selectedIds) {
+        await onToggle(id, enabled);
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setIsProcessingBulk(false);
+    }
+  };
+
   return (
-    <div className="overflow-hidden rounded-[32px] border border-slate-800 bg-slate-900/20 backdrop-blur-3xl shadow-2xl">
+    <div className="space-y-4">
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between bg-slate-900/80 border border-purple-500/30 rounded-2xl p-4 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-500/20 text-purple-400 font-bold px-3 py-1 rounded-lg text-sm border border-purple-500/30">
+              {selectedIds.size} Selected
+            </div>
+            <span className="text-sm font-medium text-slate-400">Choose an action for selected products:</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleBulkStatusChange(true)}
+              disabled={isProcessingBulk}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+            >
+              {isProcessingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
+              Enable Selected
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange(false)}
+              disabled={isProcessingBulk}
+              className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-rose-500/20 transition-all disabled:opacity-50"
+            >
+              {isProcessingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <PowerOff className="w-4 h-4" />}
+              Disable Selected
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-[32px] border border-slate-800 bg-slate-900/20 backdrop-blur-3xl shadow-2xl">
       {/* Desktop Table View */}
       <div className="hidden md:block">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-900 border-b border-slate-800">
+              <th className="px-6 py-4 w-12">
+                <button 
+                  onClick={toggleSelectAll}
+                  className={cn(
+                    "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                    selectedIds.size > 0 && selectedIds.size === products.length 
+                      ? "bg-purple-500 border-purple-500 text-white" 
+                      : "bg-slate-900 border-slate-700 hover:border-slate-500 text-transparent"
+                  )}
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+              </th>
               <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">Service Name</th>
               <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">Supplier</th>
               <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">Category</th>
@@ -39,7 +119,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }
           <tbody className="divide-y divide-slate-800/50">
             {products.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-20 text-center">
+                <td colSpan={8} className="px-6 py-20 text-center">
                   <div className="flex flex-col items-center gap-4">
                     <Database className="w-12 h-12 text-slate-800" />
                     <div>
@@ -51,7 +131,26 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }
               </tr>
             ) : (
               products.map((product) => (
-                <tr key={product.id} className="hover:bg-white/5 transition-all group">
+                <tr 
+                  key={product.id} 
+                  className={cn(
+                    "transition-all group",
+                    selectedIds.has(product.id) ? "bg-purple-500/5" : "hover:bg-white/5"
+                  )}
+                >
+                  <td className="px-6 py-5">
+                    <button 
+                      onClick={() => toggleSelectRow(product.id)}
+                      className={cn(
+                        "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                        selectedIds.has(product.id)
+                          ? "bg-purple-500 border-purple-500 text-white" 
+                          : "bg-slate-900 border-slate-700 hover:border-slate-500 text-transparent"
+                      )}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center font-medium text-xs text-purple-400 font-bold group-hover:border-purple-500/50 transition-colors">
@@ -131,9 +230,28 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }
              <h3 className="text-slate-400 font-bold uppercase tracking-wider text-xs">System Empty</h3>
           </div>
         ) : (
-          products.map((product) => (
-            <div key={product.id} className="p-6 space-y-4">
-              <div className="flex justify-between items-start">
+              products.map((product) => (
+            <div 
+              key={product.id} 
+              className={cn(
+                "p-6 space-y-4 transition-all relative border-l-2",
+                selectedIds.has(product.id) ? "border-purple-500 bg-purple-500/5" : "border-transparent"
+              )}
+            >
+              <div className="absolute top-6 left-4">
+                 <button 
+                  onClick={() => toggleSelectRow(product.id)}
+                  className={cn(
+                    "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                    selectedIds.has(product.id)
+                      ? "bg-purple-500 border-purple-500 text-white" 
+                      : "bg-slate-900 border-slate-700 hover:border-slate-500 text-transparent"
+                  )}
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex justify-between items-start ml-8">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center font-medium text-xs text-purple-400 font-bold">
                     {product.productCode.slice(-3)}
@@ -179,6 +297,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }
           ))
         )}
       </div>
+    </div>
     </div>
   );
 };

@@ -38,6 +38,7 @@ import { QRISService } from "./src/services/payment/QRISService";
 import { VirtualAccountService } from "./src/services/payment/VirtualAccountService";
 import { globalApiLimiter } from "./src/middleware/rateLimit";
 import { register } from "./src/lib/metrics";
+import { GoogleGenAI } from "@google/genai";
 import { eventDispatcher } from "./src/events/EventDispatcher";
 import { DomainEvent } from "./src/events/types";
 
@@ -232,6 +233,29 @@ async function startServer() {
       timestamp: new Date().toISOString(),
       database: "PostgreSQL Connected"
     });
+  });
+
+  const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
+
+  app.post("/api/docs/generate", requireAuth, async (req, res) => {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: "Generate a developer-friendly documentation snippet in simple JSON or Markdown string format, including the current API endpoint (POST /api/v1/order/create) and a sample request payload for creating an order with api_id, secret_key, sku, and target.",
+      });
+
+      res.json({ snippet: response.text });
+    } catch (error: any) {
+      console.error("Gemini API Error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate documentation snippet" });
+    }
   });
 
   // Real-time Event Stream (SSE)
@@ -1131,6 +1155,189 @@ async function startServer() {
         res.json({ success: true, journals });
       } catch (error: any) {
         console.error("Ledger Fetch Error:", error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+
+  app.get(
+    "/api/reconciliation/records",
+    requireAuth,
+    requireTenant,
+    requirePermission('ledger.audit'),
+    async (req, res) => {
+      const agencyId = (req as any).agency?.id;
+      try {
+        const records = await prisma.reconciliationRecord.findMany({
+          where: { tenantId: agencyId },
+          include: { journal: true },
+          orderBy: { createdAt: 'desc' },
+          take: 50
+        });
+        res.json({ success: true, records });
+      } catch (error: any) {
+        console.error("Reconciliation Records Fetch Error:", error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+
+  app.post(
+    "/api/reconciliation/force-reconcile",
+    requireAuth,
+    requireTenant,
+    requirePermission('ledger.audit'),
+    async (req, res) => {
+      const agencyId = (req as any).agency?.id;
+      const { recordId, notes } = req.body;
+
+      if (!recordId) {
+        return res.status(400).json({ error: "Record ID is required" });
+      }
+      if (!notes || notes.trim() === "") {
+        return res.status(400).json({ error: "Justification note is required" });
+      }
+
+      try {
+        const result = await prisma.$transaction(async (tx) => {
+          // 1. Fetch reconciliation record
+          const record = await tx.reconciliationRecord.findUnique({
+            where: { id: recordId },
+            include: {
+              journal: {
+                include: {
+                  entries: true
+                }
+              }
+            }
+          });
+
+          if (!record) {
+            throw new Error("Reconciliation record not found");
+          }
+
+          if (record.tenantId !== agencyId) {
+            throw new Error("Unauthorized access to this record");
+          }
+
+          if (record.status !== "DISCREPANCY") {
+            throw new Error(`Record cannot be reconciled with status: ${record.status}`);
+          }
+
+          const expectedValue = Number(record.expectedAmount);
+          const actualValue = Number(record.actualAmount);
+          const drift = actualValue - expectedValue;
+
+          // Find targeted account in the record's entries
+          const primaryEntry = record.journal?.entries?.[0];
+          const accountId = primaryEntry ? primaryEntry.accountId : "UNKNOWN:ACCOUNT";
+
+          // Check if wallet exists
+          const wallet = await tx.wallet.findUnique({
+            where: { id: accountId }
+          });
+
+          const currentWalletBalance = wallet ? Number(wallet.balance) : actualValue;
+
+          // 2. Clear any corresponding drift if a Wallet exists
+          if (wallet) {
+            await tx.wallet.update({
+              where: { id: accountId },
+              data: {
+                balance: new Prisma.Decimal(expectedValue)
+              }
+            });
+          }
+
+          // 3. Create corrective ledger entry journal to balance
+          const journalId = `force-reconcile-correction-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          const correctiveJournalDesc = `[Force Reconcile] Balance correction for account: ${accountId}. Justification: ${notes}`;
+
+          const correctiveJournal = await tx.ledgerJournal.create({
+            data: {
+              tenantId: record.tenantId,
+              type: 'MANUAL_ADJUSTMENT',
+              description: correctiveJournalDesc,
+              idempotencyKey: journalId,
+              entries: {
+                create: [
+                  {
+                    accountId,
+                    tenantId: record.tenantId,
+                    type: drift >= 0 ? 'CREDIT' : 'DEBIT',
+                    amount: new Prisma.Decimal(Math.abs(drift)),
+                    balanceBefore: new Prisma.Decimal(currentWalletBalance),
+                    balanceAfter: new Prisma.Decimal(expectedValue)
+                  },
+                  {
+                    accountId: 'SYSTEM:ADJUSTMENT:DRIFT',
+                    tenantId: record.tenantId,
+                    type: drift >= 0 ? 'DEBIT' : 'CREDIT',
+                    amount: new Prisma.Decimal(Math.abs(drift))
+                  }
+                ]
+              }
+            }
+          });
+
+          // 4. Update status of reconciliation record to RESOLVED
+          const updatedRecord = await tx.reconciliationRecord.update({
+            where: { id: recordId },
+            data: {
+              status: 'RESOLVED',
+              notes: `[Force Reconcile] Rectified drift of ${drift}. Justification: ${notes}`
+            }
+          });
+
+          return { success: true, updatedRecord, correctiveJournal };
+        });
+
+        res.json(result);
+      } catch (error: any) {
+        console.error("Force Reconcile Error:", error);
+        res.status(500).json({ error: error.message || "Failed to force reconcile" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/reconciliation/audit-logs",
+    requireAuth,
+    requireTenant,
+    requirePermission('ledger.audit'),
+    async (req, res) => {
+      const agencyId = (req as any).agency?.id;
+      const { severity } = req.query;
+      try {
+        const logs = await prisma.financialAuditLog.findMany({
+          where: {
+            tenantId: agencyId,
+            ...(severity && severity !== 'ALL' ? { severity: String(severity).toUpperCase() } : {})
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 100
+        });
+        res.json({ success: true, logs });
+      } catch (error: any) {
+        console.error("Financial Audit Logs Fetch Error:", error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+
+  app.get(
+    "/api/reconciliation/verify-integrity",
+    requireAuth,
+    requireTenant,
+    requirePermission('ledger.audit'),
+    async (req, res) => {
+      const agencyId = (req as any).agency?.id;
+      try {
+        const { LedgerAuditService } = await import("./src/services/financial/LedgerAuditService");
+        const verification = await LedgerAuditService.verifyAuditTrailIntegrity(agencyId);
+        res.json({ success: true, ...verification });
+      } catch (error: any) {
+        console.error("Verify Audit Trail Integrity Error:", error);
         res.status(500).json({ error: error.message });
       }
     }

@@ -1,4 +1,14 @@
 {
+  "landing": {
+    "platform": "Platform",
+    "solutions": "Solutions",
+    "developers": "Developers",
+    "company": "Company",
+    "brandIdentity": "Brand Identity",
+    "login": "Log In",
+    "getStarted": "Get Started",
+    "explorePlatform": "Explore Platform"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",

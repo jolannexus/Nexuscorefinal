@@ -1,4 +1,14 @@
 {
+  "landing": {
+    "platform": "Platform",
+    "solutions": "Solusi",
+    "developers": "Pengembang",
+    "company": "Perusahaan",
+    "brandIdentity": "Identitas Merek",
+    "login": "Masuk",
+    "getStarted": "Mulai Sekarang",
+    "explorePlatform": "Jelajahi Platform"
+  },
   "common": {
     "loading": "Memuat...",
     "save": "Simpan",

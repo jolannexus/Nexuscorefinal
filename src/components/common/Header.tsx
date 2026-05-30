@@ -138,9 +138,12 @@ export const Header = () => {
             />
           </div>
 
-          <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-white/5">
+          <div className="flex items-center gap-3 pl-3 border-l border-white/5">
              <LanguageSelector />
-             <div className="flex flex-col text-right pl-3 border-l border-white/5">
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-white/5">
+             <div className="flex flex-col text-right">
                 <span className="text-[11px] text-white font-medium">{user?.email?.split('@')[0]}</span>
                 <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest">{role?.replace('_', ' ')}</span>
              </div>

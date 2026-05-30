@@ -32,6 +32,7 @@ import { useTenant } from '../contexts/TenantContext';
 import { diagnostics } from '../utils/diagnostics';
 import { nexusApi } from '../apiService';
 import { useTranslation, Trans } from 'react-i18next';
+import { LanguageSelector } from '../components/LanguageSelector';
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Games': Gamepad2,
@@ -201,12 +202,18 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
               </span>
             </div>
           </div>
-          <div className="hidden md:flex flex-wrap items-center gap-6 text-xs font-bold uppercase tracking-widest text-slate-400">
-            <button onClick={() => scrollTo('catalog')} className="hover:text-white transition-colors">{t('store.catalog', "Catalog")}</button>
-            <button onClick={() => setIsTrackOrderOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-slate-800 rounded-full hover:bg-white hover:text-slate-900 transition-all text-white">
-              <Search className="w-3.5 h-3.5" />
-              {t('store.trackOrder', "Track Order")}
-            </button>
+          <div className="flex items-center gap-4">
+            <div className="md:hidden">
+              <LanguageSelector />
+            </div>
+            <div className="hidden md:flex flex-wrap items-center gap-6 text-xs font-bold uppercase tracking-widest text-slate-400">
+              <LanguageSelector />
+              <button onClick={() => scrollTo('catalog')} className="hover:text-white transition-colors">{t('store.catalog', "Catalog")}</button>
+              <button onClick={() => setIsTrackOrderOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-slate-800 rounded-full hover:bg-white hover:text-slate-900 transition-all text-white">
+                <Search className="w-3.5 h-3.5" />
+                {t('store.trackOrder', "Track Order")}
+              </button>
+            </div>
           </div>
         </div>
       </nav>

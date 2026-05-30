@@ -34,7 +34,11 @@ import {
 import { BRAND } from '../config/branding';
 import { BrandLogo } from '../components/BrandLogo';
 
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '../components/LanguageSelector';
+
 export const Landing = () => {
+  const { t } = useTranslation();
   // Simulator States
   const [activeTab, setActiveTab] = useState<'failover' | 'valuation' | 'audit'>('failover');
   const [simStep, setSimStep] = useState(0);
@@ -168,19 +172,20 @@ export const Landing = () => {
           </div>
           
           <div className="hidden lg:flex items-center gap-8 text-xs font-semibold uppercase tracking-widest text-slate-400">
-             <a href="#platform" className="hover:text-white transition-colors">Platform</a>
-             <a href="#simulator" className="hover:text-white transition-colors">Solutions</a>
-             <a href="#personas" className="hover:text-white transition-colors">Developers</a>
-             <a href="#features" className="hover:text-white transition-colors">Company</a>
-             <Link to="/brand-system" className="text-blue-400 hover:text-blue-300 transition-colors font-bold">Brand Identity</Link>
+             <a href="#platform" className="hover:text-white transition-colors">{t('landing.platform')}</a>
+             <a href="#simulator" className="hover:text-white transition-colors">{t('landing.solutions')}</a>
+             <a href="#personas" className="hover:text-white transition-colors">{t('landing.developers')}</a>
+             <a href="#features" className="hover:text-white transition-colors">{t('landing.company')}</a>
+             <Link to="/brand-system" className="text-blue-400 hover:text-blue-300 transition-colors font-bold">{t('landing.brandIdentity')}</Link>
           </div>
           
           <div className="flex items-center gap-4">
+            <LanguageSelector />
             <Link to="/login" className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors hidden sm:block">
-              Log In
+              {t('landing.login')}
             </Link>
             <Link to="/register" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg text-xs font-extrabold uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(37,99,235,0.25)] hover:shadow-[0_0_25px_rgba(37,99,235,0.45)]">
-              Get Started
+              {t('landing.getStarted')}
             </Link>
           </div>
         </div>
@@ -211,7 +216,7 @@ export const Landing = () => {
             
             <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
               <a href="#simulator" className="bg-blue-600 hover:bg-blue-500 text-white px-8 h-14 rounded-xl flex items-center justify-center gap-3 text-sm font-extrabold uppercase tracking-widest transition-all shadow-[0_0_25px_rgba(59,130,246,0.3)] w-full sm:w-auto">
-                Explore Platform
+                {t('landing.explorePlatform')}
                 <ArrowRight className="w-4 h-4" />
               </a>
               <a href="#personas" className="px-8 h-14 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] text-white flex items-center justify-center text-sm font-bold uppercase tracking-widest transition-colors w-full sm:w-auto">
