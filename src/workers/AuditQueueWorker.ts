@@ -22,6 +22,6 @@ export const startAuditQueueWorker = () => {
         throw err;
       }
     },
-    { connection: getRedisClient(), concurrency: 20 }
+    { connection: getRedisClient() as any, concurrency: 20 }
   );
 };

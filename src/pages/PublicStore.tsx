@@ -348,7 +348,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
 
             <div className="flex gap-3 overflow-x-auto pb-4 w-full md:w-auto custom-scrollbar">
               {categories.map((cat) => {
-                const Icon = CATEGORY_ICONS[cat] || ShoppingBag;
+                const Icon = CATEGORY_ICONS[cat as string] || ShoppingBag;
                 return (
                   <button
                     key={cat}

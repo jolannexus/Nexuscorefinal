@@ -23,8 +23,11 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Prepare Prisma env for validation
+        run: cp .env.example .env || true
+
       - name: Run Schema Verification
-        run: npx prisma validate --schema=prisma/schema.prisma || true
+        run: npx prisma validate --schema=prisma/schema.prisma
 
       - name: Execute ESLint Check
         run: npm run lint

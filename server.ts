@@ -106,8 +106,8 @@ async function startServer() {
           ? {
               directives: {
                 defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-                styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                scriptSrc: ["'self'"],
+                styleSrc: ["'self'", "https://fonts.googleapis.com"],
                 fontSrc: ["'self'", "https://fonts.gstatic.com"],
                 imgSrc: ["'self'", "data:", "https://*"],
                 connectSrc: ["'self'", "wss:", "https://*"],
@@ -121,6 +121,7 @@ async function startServer() {
   // No import here
   app.use("/api", globalApiLimiter);
   app.use(express.json({
+    limit: '1mb',
     verify: (req: any, res, buf) => {
       req.rawBody = buf.toString(); // For exact HMAC signature checks
     }

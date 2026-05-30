@@ -10,6 +10,8 @@ interface State {
 }
 
 export class GlobalErrorBoundary extends Component<Props, State> {
+  public readonly props!: Props;
+
   public state: State = {
     hasError: false
   };

@@ -46,7 +46,7 @@ export const Storefront = ({ resellerData }: StorefrontProps) => {
     setLoading(false);
   };
 
-  const categories = ['ALL', ...new Set(products.map(p => p.category))];
+  const categories = ['ALL', ...new Set(products.map(p => p.category))] as string[];
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 

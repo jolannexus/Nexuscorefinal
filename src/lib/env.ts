@@ -45,11 +45,12 @@ if (!process.env.DATABASE_URL) {
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().url(),
+  DIRECT_URL: z.string().url().optional(),
   PORT: z.string().default('3000'),
-  DIGIFLAZZ_SECRET: z.string().default('development_secret'), // Provide default or make optional
+  DIGIFLAZZ_SECRET: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
-  REDIS_URL: z.string().default('redis://default:JR9VPQOrk06IftUHAVl6O6ZUNfco98Vk@futuristic-immaculate-citrine-52124.db.redis.io:15097').transform(val => {
-    const fallback = 'redis://default:JR9VPQOrk06IftUHAVl6O6ZUNfco98Vk@futuristic-immaculate-citrine-52124.db.redis.io:15097';
+  REDIS_URL: z.string().default('redis://localhost:6379').transform(val => {
+    const fallback = 'redis://localhost:6379';
     if (!val || val.trim() === '' || val.includes('localhost') || val.includes('127.0.0.1')) {
       return fallback;
     }

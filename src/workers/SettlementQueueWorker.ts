@@ -28,6 +28,6 @@ export const startSettlementQueueWorker = () => {
         throw err;
       }
     },
-    { connection: getRedisClient(), concurrency: 10 }
+    { connection: getRedisClient() as any, concurrency: 10 }
   );
 };

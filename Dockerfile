@@ -32,7 +32,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev --ignore-scripts --prefer-offline
-RUN npx prisma generate
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # ==========================
 # Phase 3: Runtime image base (Distroless)

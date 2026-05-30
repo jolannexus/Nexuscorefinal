@@ -14,7 +14,7 @@ export enum QueueName {
 // Queue initialization helper
 export const createQueue = (name: QueueName) => {
   return new Queue(name, {
-    connection: getRedisClient(),
+    connection: getRedisClient() as any,
     defaultJobOptions: {
       attempts: 5,
       backoff: {
@@ -37,7 +37,7 @@ export const auditQueue = createQueue(QueueName.AUDIT);
 
 // Initialize QueueEvents for monitoring
 export const setupQueueMonitoring = (name: QueueName) => {
-  const events = new QueueEvents(name, { connection: getRedisClient() });
+  const events = new QueueEvents(name, { connection: getRedisClient() as any });
   
   events.on('failed', ({ jobId, failedReason }) => {
     logger.error(`Job ${jobId} failed in ${name}: ${failedReason}`);

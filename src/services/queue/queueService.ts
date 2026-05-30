@@ -31,7 +31,7 @@ export class QueueService {
     const redisClient = getRedisClient();
     try {
       this.queue = new Queue<TopupJobPayload>('topup-queue', {
-        connection: redisClient,
+        connection: redisClient as any,
         defaultJobOptions: {
           attempts: 3,
           backoff: {
@@ -49,7 +49,7 @@ export class QueueService {
           await this.processTopupJob(job.data);
         },
         {
-          connection: redisClient,
+          connection: redisClient as any,
           concurrency: 5,
         }
       );
