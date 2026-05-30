@@ -26,7 +26,7 @@ if (process.env.DIRECT_URL) {
   process.env.DIRECT_URL = cleanDatabaseUrl(process.env.DIRECT_URL);
 }
 
-// Sanitize and normalize REDIS_URL to protect against malformed values like "://localhost:6379"
+// Sanitize and normalize REDIS_URL to protect against malformed values such as "://host:port"
 if (process.env.REDIS_URL) {
   let url = process.env.REDIS_URL.trim();
   if (url.startsWith('://')) {
@@ -49,8 +49,8 @@ const envSchema = z.object({
   PORT: z.string().default('3000'),
   DIGIFLAZZ_SECRET: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
-  REDIS_URL: z.string().default('redis://localhost:6379').transform(val => {
-    const fallback = 'redis://localhost:6379';
+  REDIS_URL: z.string().default('redis://:SecureRedisPass2026@localhost:6379/0').transform(val => {
+    const fallback = 'redis://:SecureRedisPass2026@localhost:6379/0';
     if (!val || val.trim() === '' || val.includes('localhost') || val.includes('127.0.0.1')) {
       return fallback;
     }
