@@ -139,7 +139,6 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
        return;
     }
 
-    diagnostics.incrementFirestore('getProducts', tenant.id);
     fetch(`/api/products/public/${tenant.id}`)
       .then(res => res.json())
       .then(data => {
@@ -348,7 +347,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
 
             <div className="flex gap-3 overflow-x-auto pb-4 w-full md:w-auto custom-scrollbar">
               {categories.map((cat) => {
-                const Icon = CATEGORY_ICONS[cat as string] || ShoppingBag;
+                const Icon = CATEGORY_ICONS[cat] || ShoppingBag;
                 return (
                   <button
                     key={cat}
@@ -715,9 +714,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-500 font-bold uppercase tracking-wider">Timestamp:</span>
                             <span className="text-slate-400 font-mono">
-                              {trackingResult.createdAt?.seconds 
-                                ? new Date(trackingResult.createdAt.seconds * 1000).toLocaleString() 
-                                : new Date().toLocaleString()}
+                              {trackingResult.createdAt ? new Date(trackingResult.createdAt).toLocaleString() : new Date().toLocaleString()}
                             </span>
                           </div>
                         )}

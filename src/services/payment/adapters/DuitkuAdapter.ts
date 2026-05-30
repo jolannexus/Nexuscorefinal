@@ -245,7 +245,8 @@ export class DuitkuAdapter implements PaymentProviderAdapter {
     }
 
     const calculatedSig = this.createMd5(`${merchantCode}${amount}${merchantOrderId}${creds.merchantKey}`);
-    const isValid = calculatedSig === signatureReceived || creds.merchantCode === 'dummy_duitku_merchant_code';
+    const isLocalMock = creds.merchantCode === 'dummy_duitku_merchant_code' && process.env.NODE_ENV !== 'production';
+    const isValid = calculatedSig === signatureReceived || isLocalMock;
 
     let status: 'SETTLED' | 'EXPIRED' | 'FAILED' = 'FAILED';
     if (body.resultCode === '00') {

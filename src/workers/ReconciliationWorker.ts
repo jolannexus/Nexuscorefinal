@@ -26,6 +26,6 @@ export const startReconciliationWorker = () => {
         throw err;
       }
     },
-    { connection: getRedisClient() as any }
+    { connection: getRedisClient() }
   );
 };

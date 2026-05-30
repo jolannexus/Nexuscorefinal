@@ -106,8 +106,8 @@ async function startServer() {
           ? {
               directives: {
                 defaultSrc: ["'self'"],
-                scriptSrc: ["'self'"],
-                styleSrc: ["'self'", "https://fonts.googleapis.com"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 fontSrc: ["'self'", "https://fonts.gstatic.com"],
                 imgSrc: ["'self'", "data:", "https://*"],
                 connectSrc: ["'self'", "wss:", "https://*"],
@@ -121,7 +121,6 @@ async function startServer() {
   // No import here
   app.use("/api", globalApiLimiter);
   app.use(express.json({
-    limit: '1mb',
     verify: (req: any, res, buf) => {
       req.rawBody = buf.toString(); // For exact HMAC signature checks
     }
@@ -374,12 +373,12 @@ async function startServer() {
         }
       });
 
-      // Automatically initialize and fund a demo wallet
+      // Automatically initialize a wallet with zero balance
       await prisma.wallet.create({
         data: {
           userId: createdUser.id,
           tenantId: activeTenantId,
-          balance: 1000000.00, // Pre-fund with IDR 1,000,000 test credits
+          balance: 0.00, 
           frozenBalance: 0.00
         }
       }).catch(err => {
@@ -436,7 +435,7 @@ async function startServer() {
             data: {
               userId: user.id,
               tenantId: user.tenantId,
-              balance: 1000000.00,
+              balance: 0.00,
               frozenBalance: 0.00
             }
           }).catch(() => null);
@@ -708,7 +707,7 @@ async function startServer() {
       }
 
       try {
-        // Query active configurations from PostgreSQL Supplier table instead of Firestore
+        // Query active configurations from PostgreSQL Supplier table
         const activeSuppliers = await prisma.supplier.findMany({
           where: {
             tenantId: agencyId,

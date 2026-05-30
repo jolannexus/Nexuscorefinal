@@ -33,8 +33,6 @@ export const PaymentSettings = () => {
   useEffect(() => {
     // In the new architecture, we'll fetch payment settings via API.
     // For now, I'll just keep the local state initialization or assume it's part of tenant configuration
-    // But since the current implementation was fetching from Firestore, 
-    // I need to implement fetching from API.
   }, [tenant?.id]);
 
   const handleSave = async (e: React.FormEvent) => {

@@ -46,7 +46,7 @@ export const Storefront = ({ resellerData }: StorefrontProps) => {
     setLoading(false);
   };
 
-  const categories = ['ALL', ...new Set(products.map(p => p.category))] as string[];
+  const categories = ['ALL', ...new Set(products.map(p => p.category))];
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -69,7 +69,7 @@ export const Storefront = ({ resellerData }: StorefrontProps) => {
         const conns = await supplierService.getConnections(resellerData.agencyId);
         connection = conns.find(c => c.id === selectedProduct.supplierId) || null;
       } catch (fbErr) {
-        console.warn("Firestore connection check bypassed. Resolving supplier locally.", fbErr);
+        console.warn("Connection check bypassed. Resolving supplier locally.", fbErr);
       }
       
       if (!connection) {

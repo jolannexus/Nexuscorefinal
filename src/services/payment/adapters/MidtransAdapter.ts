@@ -336,7 +336,8 @@ export class MidtransAdapter implements PaymentProviderAdapter {
       .update(`${orderId}${statusCode}${grossAmount}${creds.serverKey}`)
       .digest('hex');
 
-    const isValid = calculatedSig === signatureKeyReceived || creds.serverKey === 'dummy_midtrans_server_key';
+    const isLocalMock = creds.serverKey === 'dummy_midtrans_server_key' && process.env.NODE_ENV !== 'production';
+    const isValid = calculatedSig === signatureKeyReceived || isLocalMock;
 
     let status: 'SETTLED' | 'EXPIRED' | 'FAILED' = 'FAILED';
     if (body.transaction_status === 'settlement' || body.transaction_status === 'capture') {

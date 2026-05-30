@@ -7,13 +7,13 @@ import { QueueName } from '../lib/queueManager';
 export const startQueueTelemetryWorker = () => {
   const connection = getRedisClient();
   const queues = [
-    new Queue(QueueName.TRANSACTION_PROCESSING, { connection: connection as any }),
-    new Queue(QueueName.WEBHOOK_DELIVERY, { connection: connection as any }),
-    new Queue(QueueName.RECONCILIATION, { connection: connection as any }),
-    new Queue('settlement-queue', { connection: connection as any }),
-    new Queue(QueueName.SETTLEMENT, { connection: connection as any }),
-    new Queue(QueueName.PAYOUT, { connection: connection as any }),
-    new Queue(QueueName.AUDIT, { connection: connection as any })
+    new Queue(QueueName.TRANSACTION_PROCESSING, { connection }),
+    new Queue(QueueName.WEBHOOK_DELIVERY, { connection }),
+    new Queue(QueueName.RECONCILIATION, { connection }),
+    new Queue('settlement-queue', { connection }),
+    new Queue(QueueName.SETTLEMENT, { connection }),
+    new Queue(QueueName.PAYOUT, { connection }),
+    new Queue(QueueName.AUDIT, { connection })
   ];
 
   const interval = setInterval(async () => {

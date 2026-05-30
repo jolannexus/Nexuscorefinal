@@ -25,7 +25,7 @@ export interface User {
   role: Role;
   agencyId: string | null;
   displayName: string | null;
-  createdAt: any; // Firestore Timestamp
+  createdAt: any;
 }
 
 export interface Permissions {

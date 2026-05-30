@@ -264,7 +264,7 @@ export const TicketSystem = () => {
                         {msg.senderName}
                       </span>
                       <span className="text-xs text-slate-800 font-mono">
-                        {msg.createdAt?.seconds ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
                     <div className={cn(

@@ -44,7 +44,10 @@ export class WebhookService {
         };
 
         if (secret) {
-          headers['x-nexuscore-signature'] = 'signed-with-secret'; 
+          const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+          const hmac = require('crypto').createHmac('sha256', secret);
+          const signature = hmac.update(payloadString).digest('hex');
+          headers['x-nexuscore-signature'] = signature; 
         }
 
         const response = await fetch(url, {

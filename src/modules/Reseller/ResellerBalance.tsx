@@ -21,7 +21,6 @@ export const ResellerBalance = () => {
 
   const loadProfile = async (agencyId: string) => {
     if (!user?.email) return;
-    diagnostics.incrementFirestore('getResellerByEmail', user.email);
     const data = await resellerService.getResellerByEmail(user.email, agencyId);
     setProfile(data);
   };

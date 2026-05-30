@@ -2,7 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nexuscore-enterprise-jwt-signing-secret-key-32-chars';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' 
+  ? crypto.randomBytes(32).toString('hex') 
+  : 'nexuscore-enterprise-jwt-signing-secret-key-32-chars');
 
 export function generateToken(payload: { uid: string; email: string; role: string; tenantId?: string | null }) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -83,7 +85,7 @@ export const requireRole = (allowedRoles: string[]) => {
         return res.status(401).json({ error: 'Unauthorized context' });
       }
 
-      // Fetch from PostgreSQL database using prisma instead of Firebase Firestore!
+      // Fetch from PostgreSQL database using prisma
       const user = await prisma.user.findFirst({
         where: { id: req.user.uid }
       });

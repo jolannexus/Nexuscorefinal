@@ -101,6 +101,7 @@ const StatCard = ({ label, value, trend, icon: Icon, trendUp }: any) => (
 
 import { useTranslation } from 'react-i18next';
 import { OnboardingWidget } from '../components/dashboard/OnboardingWidget';
+import { MiniLedger } from '../components/dashboard/MiniLedger';
 
 export const Dashboard = () => {
   const { t } = useTranslation();
@@ -576,32 +577,7 @@ export const Dashboard = () => {
           </div>
 
           <div className="space-y-6">
-            <Card title="Recent Activity" subtitle="Real-time transaction history">
-              <div className="space-y-2 mt-2">
-                {recentTransactions.map((tx) => (
-                  <div key={tx.id} className="p-3 bg-[#0a0a0a] border border-white/5 rounded-xl flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10">
-                         <History className="w-4 h-4 text-slate-400" />
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-semibold text-white tracking-tight leading-none mb-1">{tx.type}</p>
-                        <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-widest">{tx.description}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-white tracking-tight">IDR {tx.amount.toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))}
-                {recentTransactions.length === 0 && (
-                  <p className="text-center py-6 text-sm text-slate-500 font-medium">No recent transactions recorded</p>
-                )}
-              </div>
-              <button onClick={() => navigate('/history')} className="w-full mt-4 py-2 bg-transparent border border-white/5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-white/5 hover:text-white transition-all">
-                View Full History
-              </button>
-            </Card>
+            <MiniLedger transactions={recentTransactions} />
           </div>
         </motion.div>
 
@@ -775,25 +751,7 @@ export const Dashboard = () => {
             </div>
           </Card>
 
-          <Card title={t('dashboard.recentActivity', 'Recent Activity')} subtitle={t('dashboard.recentActivitySub', 'Your recent actions')}>
-             <div className="space-y-4 mt-2">
-                {[
-                  { time: '14:22:04', event: 'Password Updated', user: 'You', status: 'Success' },
-                  { time: '13:10:45', event: 'Logged In', user: 'You', status: 'Success' },
-                  { time: '11:05:12', event: 'Profile Updated', user: 'You', status: 'Success' }
-                ].map((log, i) => (
-                  <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02] -mx-4 px-4 transition-colors rounded-lg">
-                    <div className="flex items-start gap-4">
-                       <span className="text-[11px] text-slate-500 mt-0.5">{log.time}</span>
-                       <div>
-                          <p className="text-xs font-semibold text-slate-200 tracking-wide">{log.event}</p>
-                       </div>
-                    </div>
-                    <span className="text-[11px] font-medium text-slate-400 bg-white/5 px-2 py-1 rounded border border-white/10">{log.status}</span>
-                  </div>
-                ))}
-             </div>
-          </Card>
+          <MiniLedger transactions={recentTransactions} />
         </div>
 
         {/* Full-width Incoming Webhooks Table */}

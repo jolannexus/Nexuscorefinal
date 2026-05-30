@@ -26,7 +26,7 @@ if (process.env.DIRECT_URL) {
   process.env.DIRECT_URL = cleanDatabaseUrl(process.env.DIRECT_URL);
 }
 
-// Sanitize and normalize REDIS_URL to protect against malformed values such as "://host:port"
+// Sanitize and normalize REDIS_URL to protect against malformed values like "://localhost:6379"
 if (process.env.REDIS_URL) {
   let url = process.env.REDIS_URL.trim();
   if (url.startsWith('://')) {
@@ -42,15 +42,16 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/nexuscore?schema=public&sslmode=prefer';
 }
 
+import crypto from 'crypto';
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().url(),
-  DIRECT_URL: z.string().url().optional(),
   PORT: z.string().default('3000'),
-  DIGIFLAZZ_SECRET: z.string().optional(),
+  DIGIFLAZZ_SECRET: z.string().default(process.env.NODE_ENV === 'production' ? crypto.randomBytes(32).toString('hex') : 'development_secret'), 
   GEMINI_API_KEY: z.string().optional(),
-  REDIS_URL: z.string().default('redis://:SecureRedisPass2026@localhost:6379/0').transform(val => {
-    const fallback = 'redis://:SecureRedisPass2026@localhost:6379/0';
+  REDIS_URL: z.string().default('redis://default:JR9VPQOrk06IftUHAVl6O6ZUNfco98Vk@futuristic-immaculate-citrine-52124.db.redis.io:15097').transform(val => {
+    const fallback = 'redis://default:JR9VPQOrk06IftUHAVl6O6ZUNfco98Vk@futuristic-immaculate-citrine-52124.db.redis.io:15097';
     if (!val || val.trim() === '' || val.includes('localhost') || val.includes('127.0.0.1')) {
       return fallback;
     }

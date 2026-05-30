@@ -71,7 +71,7 @@ export const DepositHub = () => {
                 <div className="flex items-center gap-1.5 opacity-50">
                   <Clock className="w-2.5 h-2.5" />
                   <span className="text-xs text-slate-500 font-mono italic">
-                    {d.paymentMethod} @ {d.createdAt?.seconds ? new Date(d.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'}
+                    {d.paymentMethod} @ {d.createdAt ? new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'}
                   </span>
                 </div>
              </div>

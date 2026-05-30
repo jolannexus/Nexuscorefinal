@@ -317,7 +317,8 @@ export class XenditAdapter implements PaymentProviderAdapter {
 
     // Xendit callback verification token
     const tokenHeader = payload.headers['x-callback-token'];
-    const isValid = tokenHeader === creds.callbackToken || creds.apiKey === 'dummy_xendit_secret_key';
+    const isLocalMock = creds.apiKey === 'dummy_xendit_secret_key' && process.env.NODE_ENV !== 'production';
+    const isValid = tokenHeader === creds.callbackToken || isLocalMock;
 
     const transactionId = body.external_id || body.reference_id || body.qr_code?.external_id || '';
     const amount = body.amount || body.qr_payment?.amount || 0;

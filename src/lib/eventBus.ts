@@ -29,7 +29,7 @@ class EventBusService {
 
   constructor() {
     this.queue = new Queue('nexus-event-bus', {
-      connection: getRedisClient() as any,
+      connection: getRedisClient(),
       defaultJobOptions: {
         attempts: 5,
         backoff: { type: 'exponential', delay: 2000 },

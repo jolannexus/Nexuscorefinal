@@ -1,7 +1,6 @@
 // Global diagnostics tracking utility
 if (typeof window !== 'undefined') {
   (window as any).__renderCountMap = (window as any).__renderCountMap || {};
-  (window as any).__firestoreRequests = (window as any).__firestoreRequests || 0;
   (window as any).__tenantResolutions = (window as any).__tenantResolutions || 0;
 }
 
@@ -24,23 +23,6 @@ export const diagnostics = {
   },
 
   /**
-   * Tracks and increments Firestore call count.
-   */
-  incrementFirestore(operation: string, details?: string) {
-    if (typeof window === 'undefined') return;
-    (window as any).__firestoreRequests++;
-    const count = (window as any).__firestoreRequests;
-    console.log(
-      `%c[DIAGNOSTIC: FIRESTORE] #${count} - Operation: ${operation} (${details || ''})`,
-      'color: #f59e0b; font-weight: bold;'
-    );
-    
-    if (count > 100) {
-      console.error(`%c[CRITICAL] Excessive Firestore activity detected! Count is ${count}.`, 'color: red; font-size: 14px; font-weight: bold;');
-    }
-  },
-
-  /**
    * Tracks and increments Tenant Resolution count.
    */
   incrementTenantResolve(hostname: string) {
@@ -57,10 +39,9 @@ export const diagnostics = {
    * Snapshot performance metrics.
    */
   getSnapshot() {
-    if (typeof window === 'undefined') return { renderCountMap: {}, firestoreRequests: 0, tenantResolutions: 0 };
+    if (typeof window === 'undefined') return { renderCountMap: {}, tenantResolutions: 0 };
     return {
       renderCountMap: { ...(window as any).__renderCountMap },
-      firestoreRequests: (window as any).__firestoreRequests,
       tenantResolutions: (window as any).__tenantResolutions,
     };
   }
