@@ -43,7 +43,7 @@ export const useOrders = () => {
         orderService.processOrder(profile.agencyId, orderId).then(() => {
           fetchOrders();
         }).catch(err => {
-          console.error('Order processing background error:', err);
+          
           fetchOrders();
         });
       }
@@ -60,7 +60,7 @@ export const useOrders = () => {
       await orderService.processOrder(profile.agencyId, orderId);
       await fetchOrders();
     } catch (err: any) {
-      console.error('Manual retry failed:', err);
+      
       throw err;
     }
   };

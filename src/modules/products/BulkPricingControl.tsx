@@ -37,7 +37,7 @@ export const BulkPricingControl: React.FC<BulkPricingControlProps> = ({ categori
         onComplete();
       }, 2000);
     } catch (err) {
-      console.error('Failed to apply pricing rule:', err);
+      alert('Gagal menerapkan pricing rule. Periksa koneksi dan coba lagi.');
     } finally {
       setLoading(false);
     }

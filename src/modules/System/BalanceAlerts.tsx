@@ -22,7 +22,7 @@ export const BalanceAlerts = () => {
         setAlerts(data.alerts || []);
       }
     } catch (err) {
-      console.error('Failed to load integrity alerts:', err);
+      
     } finally {
       setLoading(false);
     }

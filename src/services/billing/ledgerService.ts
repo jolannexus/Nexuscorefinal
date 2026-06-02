@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
+import { financialLogger } from '../../lib/logger';
 
 export class LedgerService {
   /**
@@ -23,7 +24,7 @@ export class LedgerService {
           where: { idempotencyKey: params.referenceId }
         });
         if (existingLedger) {
-          console.warn(`[LEDGER] Idempotent hit for token: ${params.referenceId}. Skipping double charge.`);
+          financialLogger.warn(`[LEDGER] Idempotent hit for token: ${params.referenceId}. Skipping double charge.`);
           return {
             success: true,
             transactionId: existingLedger.id,

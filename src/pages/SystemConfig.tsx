@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AnnouncementManager } from '../modules/System/AnnouncementManager';
 import { LedgerReconciliationManager } from '../modules/System/LedgerReconciliationManager';
 import { LedgerDriftMonitor } from '../modules/System/LedgerDriftMonitor';
+import { SaaSModelManager } from '../modules/System/SaaSModelManager';
 import { Settings, ShieldCheck, Database, Key, Terminal } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { useTranslation } from 'react-i18next';
@@ -70,6 +71,11 @@ export const SystemConfigPage = () => {
                 </button>
              </Card>
           </div>
+        </div>
+        
+        {/* Right Column: Operation Mode & Misc */}
+        <div className="lg:col-span-1 space-y-8">
+          <SaaSModelManager />
         </div>
       </div>
     </div>

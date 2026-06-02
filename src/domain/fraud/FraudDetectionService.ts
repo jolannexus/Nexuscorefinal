@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { logger } from '../../lib/logger';
 
 export interface TransactionContext {
   ipAddress: string;
@@ -27,7 +28,7 @@ export class FraudDetectionService {
       riskScore += 10;
     }
 
-    console.log(`[FraudDetection] Risk score calculated for tenant ${context.tenantId}: ${riskScore}`);
+    logger.info(`[FraudDetection] Risk score calculated for tenant ${context.tenantId}: ${riskScore}`);
     
     return riskScore;
   }

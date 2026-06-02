@@ -25,14 +25,14 @@ export const tenantService = {
     }
 
     try {
-      const response = await fetch('/api/tenant/current');
+      const response = await fetch('/api/tenant/current', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } });
       if (response.ok) {
         const tenant = await response.json();
         cachedTenant = tenant;
         return tenant;
       }
     } catch (error) {
-      console.warn('API error or local network block resolving tenant. Serving resilient fallback:', error);
+      
     }
 
     cachedTenant = fallbackAgency;

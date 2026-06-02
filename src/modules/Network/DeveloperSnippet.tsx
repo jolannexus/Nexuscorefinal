@@ -12,6 +12,7 @@ export const DeveloperSnippet = () => {
   "target": "12345678(2001)"
 }`);
   const [isLoading, setIsLoading] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -28,7 +29,7 @@ export const DeveloperSnippet = () => {
         setSnippet(data.snippet.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, ''));
       }
     } catch (err) {
-      console.error("Failed to generate snippet:", err);
+      setGenError('Gagal generate snippet. Coba lagi.');
     } finally {
       setIsLoading(false);
     }
@@ -46,6 +47,8 @@ export const DeveloperSnippet = () => {
           {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
           AI Generate
         </button>
+          {genError && <p className="text-red-400 text-xs mt-1">{genError}</p>}
+          {genError && <p className="text-red-400 text-xs mt-1">{genError}</p>}
       </div>
       <div className="bg-black/50 p-3 rounded text-xs leading-relaxed relative group overflow-x-auto">
         <div className="absolute top-2 right-2 text-slate-700 group-hover:text-purple-500 transition-colors cursor-pointer">

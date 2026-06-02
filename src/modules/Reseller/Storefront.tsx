@@ -69,7 +69,7 @@ export const Storefront = ({ resellerData }: StorefrontProps) => {
         const conns = await supplierService.getConnections(resellerData.agencyId);
         connection = conns.find(c => c.id === selectedProduct.supplierId) || null;
       } catch (fbErr) {
-        console.warn("Connection check bypassed. Resolving supplier locally.", fbErr);
+        
       }
       
       if (!connection) {

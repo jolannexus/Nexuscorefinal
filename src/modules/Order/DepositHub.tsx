@@ -11,6 +11,7 @@ export const DepositHub = () => {
   const { user, profile } = useAuth();
   const [deposits, setDeposits] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.agencyId) {
@@ -30,7 +31,7 @@ export const DepositHub = () => {
       await BillingService.approveDeposit(tx);
       await loadDeposits();
     } catch (err) {
-      console.error(err);
+      setError('Terjadi kesalahan. Coba ulangi request.');
     } finally {
       setLoading(false);
     }
@@ -43,7 +44,7 @@ export const DepositHub = () => {
       await BillingService.rejectDeposit(tx.agencyId, tx.id);
       await loadDeposits();
     } catch (err) {
-      console.error(err);
+      setError('Terjadi kesalahan. Coba ulangi request.');
     } finally {
       setLoading(false);
     }

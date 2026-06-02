@@ -15,6 +15,7 @@ export interface Agency {
   theme: Theme;
   plan?: 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
   subscriptionStatus?: 'ACTIVE' | 'EXPIRED' | 'TRIAL';
+  operationMode?: 'MANAGED_DEPOSIT' | 'BYO_SUPPLIER';
   siteTitle?: string;
   primaryColor?: string;
 }

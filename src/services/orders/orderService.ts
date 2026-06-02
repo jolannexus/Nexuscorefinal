@@ -1,5 +1,6 @@
 import { Order, Product, SupplierConnection } from '../../types/index';
 import { authService } from '../authService';
+import { logger } from '../../lib/logger';
 
 export const orderService = {
   /**
@@ -17,7 +18,7 @@ export const orderService = {
       if (!response.ok) throw new Error("Failed to fetch orders");
       return await response.json();
     } catch (error) {
-      console.error('[SQL_ORDERS] Error retrieving orders from API:', error);
+      logger.error({ error }, '[SQL_ORDERS] Error retrieving orders from API:');
       return [];
     }
   },
@@ -61,9 +62,9 @@ export const orderService = {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ orderId: result.orderId, agencyId })
-      }).catch(e => console.error("[Fulfillment Trigger Warning] Async fetch call failed:", e));
+      }).catch(e => logger.error({ error: e }, "[Fulfillment Trigger Warning] Async fetch call failed:"));
     } catch (apiErr) {
-      console.warn('[Fulfillment Trigger Bypassed]', apiErr);
+      logger.warn({ error: apiErr }, '[Fulfillment Trigger Bypassed]');
     }
 
     return result.orderId;
@@ -89,7 +90,7 @@ export const orderService = {
         throw new Error(data.error || 'Execution engine returned failure');
       }
     } catch (error: any) {
-      console.error(`[OrderService] Manual processing pipeline trigger failed:`, error);
+      logger.error({ error }, `[OrderService] Manual processing pipeline trigger failed:`);
       throw error;
     }
   }

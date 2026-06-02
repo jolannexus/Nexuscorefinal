@@ -1,6 +1,13 @@
 import { Product, SupplierConnection } from '../../types/index';
 import { authService } from '../authService';
 
+const logger = {
+  info: (...args: any[]) => { if ((import.meta as any).env.DEV) console.info(...args); },
+  debug: (...args: any[]) => { if ((import.meta as any).env.DEV) console.debug(...args); },
+  warn: (...args: any[]) => { if ((import.meta as any).env.DEV) console.warn(...args); },
+  error: (...args: any[]) => { if ((import.meta as any).env.DEV) console.error(...args); },
+};
+
 export const productService = {
   /**
    * Loads products database from PostgreSQL database.
@@ -18,7 +25,7 @@ export const productService = {
       }
       return [];
     } catch (error) {
-      console.error('Failed to get products:', error);
+      logger.error('Failed to get products:', error);
       return [];
     }
   },
@@ -38,7 +45,7 @@ export const productService = {
         body: JSON.stringify({ productId, isEnabled })
       });
     } catch (error) {
-      console.error('Failed to toggle product status:', error);
+      logger.error('Failed to toggle product status:', error);
     }
   },
 
@@ -65,9 +72,9 @@ export const productService = {
         throw new Error(error.error || 'Server product catalog synchronization failed');
       }
 
-      console.log('Sync completed successfully');
+      logger.info('Sync completed successfully');
     } catch (error) {
-      console.error('Product sync failed:', error);
+      logger.error('Product sync failed:', error);
       throw error;
     }
   },
@@ -76,12 +83,12 @@ export const productService = {
    * Background task runner to trigger periodic catalog synchronizations.
    */
   startBackgroundPriceSync(connections: SupplierConnection[], intervalMs: number = 300000) {
-    console.log(`Starting background price sync every ${intervalMs}ms...`);
+    logger.info(`Starting background price sync every ${intervalMs}ms...`);
     return setInterval(() => {
-      console.log('Running scheduled background price sync...');
+      logger.info('Running scheduled background price sync...');
       connections.forEach(conn => {
         this.syncProducts(conn).catch(err => {
-          console.error(`Background sync failed for connection ${conn.id}:`, err);
+          logger.error(`Background sync failed for connection ${conn.id}:`, err);
         });
       });
     }, intervalMs);

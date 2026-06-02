@@ -20,7 +20,7 @@ export const DomainManager = () => {
       await new Promise(r => setTimeout(r, 1500));
       setStatus('PENDING');
     } catch (e) {
-      console.error(e);
+      
     } finally {
       setIsVerifying(false);
     }
@@ -33,7 +33,7 @@ export const DomainManager = () => {
       setStatus('VERIFIED');
       setTimeout(() => setStatus('LIVE'), 5000);
     } catch (e) {
-      console.error(e);
+      
     } finally {
       setIsProvisioning(false);
     }

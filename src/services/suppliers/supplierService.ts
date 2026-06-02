@@ -18,7 +18,7 @@ export const supplierService = {
       }
       return [];
     } catch (error) {
-      console.error('Failed to get supplier connections:', error);
+      if ((import.meta as any).env.DEV) console.error('Failed to get supplier connections:', error);
       return [];
     }
   },
@@ -70,7 +70,7 @@ export const supplierService = {
         })
       });
     } catch (error) {
-      console.error('Failed to update connection:', error);
+      if ((import.meta as any).env.DEV) console.error('Failed to update connection:', error);
     }
   },
 
@@ -87,7 +87,7 @@ export const supplierService = {
         }
       });
     } catch (error) {
-      console.error('Failed to delete connection:', error);
+      if ((import.meta as any).env.DEV) console.error('Failed to delete connection:', error);
     }
   },
 
@@ -117,7 +117,7 @@ export const supplierService = {
         throw new Error('Failed to fetch balance from supplier');
       }
     } catch (error) {
-      console.error('Balance sync failed:', error);
+      if ((import.meta as any).env.DEV) console.error('Balance sync failed:', error);
       throw error;
     }
   },
@@ -152,7 +152,7 @@ export const supplierService = {
       const products = data.products || [];
       return { count: Math.min(products.length, 100), total: products.length };
     } catch (error) {
-      console.error('Product sync failed:', error);
+      if ((import.meta as any).env.DEV) console.error('Product sync failed:', error);
       throw error;
     }
   }

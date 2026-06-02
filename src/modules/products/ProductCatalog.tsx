@@ -44,7 +44,7 @@ export const ProductCatalog = () => {
         }
       }
     } catch (err) {
-      console.error('Global sync failed:', err);
+      
     } finally {
       setSyncing(false);
     }

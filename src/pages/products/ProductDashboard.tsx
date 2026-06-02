@@ -52,7 +52,7 @@ export const ProductDashboard = () => {
         }
       }
     } catch (err) {
-      console.error('Global sync failed:', err);
+      alert('Gagal sync global. Coba lagi.');
     } finally {
       setSyncing(false);
     }
@@ -63,7 +63,7 @@ export const ProductDashboard = () => {
     try {
       await productService.toggleProductStatus(profile.agencyId, id, enabled);
     } catch (err) {
-      console.error('Toggle failed:', err);
+      alert('Gagal toggle. Coba lagi.');
     }
   };
 

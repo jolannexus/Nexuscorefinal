@@ -33,7 +33,7 @@ export const QRISPaymentValidator = ({ depositId, onSuccess, className }: QRISPa
           }
         }
       } catch (err) {
-        console.error('Failed to sync deposit:', err);
+        
       }
     }, 5000);
 

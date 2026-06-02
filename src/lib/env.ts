@@ -12,14 +12,10 @@ function cleanDatabaseUrl(url: string | undefined): string | undefined {
     cleaned = cleaned.replace(/\[(.*?)\]/, (_, p1) => encodeURIComponent(p1));
   }
   
-  // Ensure host db.tymrypisfoskisfklnqb.supabase.co uses port 6543 instead of 5432
-  if (cleaned.includes('db.tymrypisfoskisfklnqb.supabase.co')) {
-    cleaned = cleaned.replace(':5432', ':6543');
-  }
-  
   return cleaned;
 }
 
+// DATABASE_URL harus dikonfigurasi melalui file .env
 // Ensure connection parameters are sanitized and cleaned before they are validated
 process.env.DATABASE_URL = cleanDatabaseUrl(process.env.DATABASE_URL);
 if (process.env.DIRECT_URL) {
@@ -37,26 +33,23 @@ if (process.env.REDIS_URL) {
   process.env.REDIS_URL = url;
 }
 
-// Gracefully supply default connection parameters if not set to prevent initial server crash
 if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/nexuscore?schema=public&sslmode=prefer';
+  throw new Error('[ENV] DATABASE_URL wajib diset. Salin .env.example ke .env dan isi nilainya.\nFormat: postgresql://user:password@host:port/dbname');
 }
 
 import crypto from 'crypto';
 
+// ⚠️  Semua variable wajib diset di file .env
+// Salin .env.example ke .env lalu isi sesuai environment kamu
+// Untuk Supabase: gunakan port 6543 (pooler) untuk DATABASE_URL
+//                 gunakan port 5432 untuk DIRECT_URL (migrations)
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().url(),
   PORT: z.string().default('3000'),
   DIGIFLAZZ_SECRET: z.string().default(process.env.NODE_ENV === 'production' ? crypto.randomBytes(32).toString('hex') : 'development_secret'), 
   GEMINI_API_KEY: z.string().optional(),
-  REDIS_URL: z.string().default('redis://default:JR9VPQOrk06IftUHAVl6O6ZUNfco98Vk@futuristic-immaculate-citrine-52124.db.redis.io:15097').transform(val => {
-    const fallback = 'redis://default:JR9VPQOrk06IftUHAVl6O6ZUNfco98Vk@futuristic-immaculate-citrine-52124.db.redis.io:15097';
-    if (!val || val.trim() === '' || val.includes('localhost') || val.includes('127.0.0.1')) {
-      return fallback;
-    }
-    return val;
-  }),
+  REDIS_URL: z.string().default('redis://localhost:6379/0'),
 });
 
 const _env = envSchema.safeParse(process.env);

@@ -1,5 +1,6 @@
 import { Transaction } from '../../types/index';
 import { authService } from '../authService';
+import { financialLogger } from '../../lib/logger';
 
 export class BillingService {
   static async getPendingDeposits(agencyId: string): Promise<Transaction[]> {
@@ -13,7 +14,7 @@ export class BillingService {
       if (!response.ok) throw new Error("Failed to fetch pending deposits");
       return await response.json();
     } catch (err) {
-      console.error(err);
+      financialLogger.error({ error: err }, 'Billing service error');
       return [];
     }
   }

@@ -64,6 +64,7 @@ interface ReconciliationResult {
 
 export const LedgerReconciliationManager = () => {
   const [journals, setJournals] = useState<LedgerJournal[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [loadingJournals, setLoadingJournals] = useState(true);
   const [reconciliationReport, setReconciliationReport] = useState<ReconciliationResult | null>(null);
   const [runningReconciliation, setRunningReconciliation] = useState(false);
@@ -106,7 +107,7 @@ export const LedgerReconciliationManager = () => {
         setAuditLogs(data.logs || []);
       }
     } catch (err: any) {
-      console.error('Error fetching financial audit logs:', err);
+      setError('Gagal memuat data. Refresh halaman atau hubungi admin.');
     } finally {
       setLoadingLogs(false);
     }
@@ -135,7 +136,7 @@ export const LedgerReconciliationManager = () => {
         });
       }
     } catch (err: any) {
-      console.error('Error verifying integrity:', err);
+      setError('Gagal memuat data. Refresh halaman atau hubungi admin.');
       setIntegrityStatus(prev => ({ ...prev, loading: false }));
     }
   };
@@ -158,7 +159,7 @@ export const LedgerReconciliationManager = () => {
         setJournals(data.journals || []);
       }
     } catch (err: any) {
-      console.error('Error fetching ledger journals:', err);
+      setError('Gagal memuat data. Refresh halaman atau hubungi admin.');
     } finally {
       setLoadingJournals(false);
     }
@@ -201,7 +202,7 @@ export const LedgerReconciliationManager = () => {
         throw new Error(rText || 'Failed running reconciliation loop.');
       }
     } catch (err: any) {
-      console.error('Reconciliation error:', err);
+      setError('Gagal memuat data. Refresh halaman atau hubungi admin.');
       setMessage({ type: 'danger', text: err.message || 'Failed to trigger reconciliation engine.' });
     } finally {
       setRunningReconciliation(false);

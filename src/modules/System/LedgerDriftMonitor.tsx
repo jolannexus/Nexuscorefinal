@@ -47,7 +47,7 @@ export const LedgerDriftMonitor = () => {
         setRecords(data.records || []);
       }
     } catch (err) {
-      console.error('Failed to fetch reconciliation records', err);
+      
     } finally {
       setIsLoading(false);
     }

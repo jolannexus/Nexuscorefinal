@@ -3,6 +3,7 @@ import { SupplierValidationResult, SupplierResponse, SupplierBalance, SupplierOr
 import { SupplierStatus } from '../../../services/suppliers/types';
 import { SupplierConnection } from '../../../types/index';
 import CryptoJS from 'crypto-js';
+import { logger } from '../../../lib/logger';
 
 export class VipResellerAdapter extends BaseAdapter {
   id = 'vip-reseller';
@@ -87,7 +88,7 @@ export class VipResellerAdapter extends BaseAdapter {
         message: result.message || 'Failed to authenticate with VIP Reseller.'
       };
     } catch (error: any) {
-      console.error('VIP Reseller credentials validation error:', error);
+      logger.error({ error }, 'VIP Reseller credentials validation error');
       // Fallback in case of external API networking block
       return { 
         isValid: true, 
@@ -104,7 +105,7 @@ export class VipResellerAdapter extends BaseAdapter {
     const { apiKey, resellerId, username } = this.getCredentials(credentials);
     const activeApiId = resellerId || username;
 
-    console.info(`[${this.name}] Reading current wallet balance...`);
+    logger.info({ adapter: this.name }, `Reading current wallet balance...`);
 
     return this.withRetry(async () => {
       const sign = this.generateSignature(activeApiId, apiKey, 'profile');
@@ -140,7 +141,7 @@ export class VipResellerAdapter extends BaseAdapter {
     const { apiKey, resellerId, username } = this.getCredentials(credentials);
     const activeApiId = resellerId || username;
 
-    console.info(`[${this.name}] Syncing full remote product list...`);
+    logger.info({ adapter: this.name }, `Syncing full remote product list...`);
 
     return this.withRetry(async () => {
       const sign = this.generateSignature(activeApiId, apiKey, 'services');
@@ -187,7 +188,7 @@ export class VipResellerAdapter extends BaseAdapter {
     const { apiKey, resellerId, username } = this.getCredentials(params.credentials);
     const activeApiId = resellerId || username;
 
-    console.info(`[${this.name}] Sending Order: ${params.orderId} (Product: ${params.productCode}, Target: ${params.target})`);
+    logger.info({ adapter: this.name, orderId: params.orderId, productCode: params.productCode, target: params.target }, `Sending Order`);
 
     return this.withRetry(async () => {
       const sign = this.generateSignature(activeApiId, apiKey, 'order');
@@ -235,7 +236,7 @@ export class VipResellerAdapter extends BaseAdapter {
     const { apiKey, resellerId, username } = this.getCredentials(credentials);
     const activeApiId = resellerId || username;
 
-    console.info(`[${this.name}] Dynamic transaction status sync check: ${internalOrderId}`);
+    logger.info({ adapter: this.name, internalOrderId }, `Dynamic transaction status sync check`);
 
     try {
       const sign = this.generateSignature(activeApiId, apiKey, 'status');
@@ -267,7 +268,7 @@ export class VipResellerAdapter extends BaseAdapter {
 
   // Backward compatibility shim
   async syncData(connection: SupplierConnection): Promise<void> {
-    console.log(`[VIP Reseller] syncData shim triggered.`);
+    logger.info(`[VIP Reseller] syncData shim triggered.`);
     await this.getProducts(connection);
   }
 

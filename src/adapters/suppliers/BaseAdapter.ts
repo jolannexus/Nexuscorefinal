@@ -1,6 +1,7 @@
 import { ISupplierAdapter, SupplierValidationResult, SupplierResponse, SupplierBalance, SupplierOrderResult } from '../../components/ISupplierAdapter';
 import { SupplierStatus } from '../../services/suppliers/types';
 import { SupplierConnection } from '../../types/index';
+import { logger } from '../../lib/logger';
 
 export abstract class BaseAdapter implements ISupplierAdapter {
   abstract id: string;
@@ -86,7 +87,7 @@ export abstract class BaseAdapter implements ISupplierAdapter {
       } catch (error) {
         lastError = error;
         const delay = initialDelay * Math.pow(2, attempt);
-        console.warn(`[${this.name}] Attempt ${attempt + 1} failed. Retrying in ${delay}ms...`);
+        logger.warn({ adapter: this.name, attempt: attempt + 1, delayMs: delay }, 'Adapter retry attempt');
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }

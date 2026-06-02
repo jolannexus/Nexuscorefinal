@@ -31,6 +31,22 @@ export const createRateLimiter = (prefix: string, maxRequests: number, windowSec
   });
 };
 
-export const globalApiLimiter = createRateLimiter('global_api', 1000, 60); // 1000 requests per minute
-export const authLimiter = createRateLimiter('auth', 10, 60); // 10 login attempts per minute
-export const webhookLimiter = createRateLimiter('webhook', 500, 60); // 500 webhook hits per minute
+export const globalApiLimiter = createRateLimiter('global_api', 1000, 60);
+export const authLimiter = createRateLimiter('auth', 10, 60);
+export const webhookLimiter = createRateLimiter('webhook', 500, 60);
+
+// Strict limiter khusus untuk login (anti brute-force)
+export const loginStrictLimiter = createRateLimiter('login_strict', 20, 3600); // 20x per jam
+
+// Limiter dengan custom handler untuk logging
+export const authRouteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn({ ip: req.ip, path: req.path }, '[SECURITY] Rate limit reached on auth route');
+    res.status(429).json({ error: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.' });
+  },
+  skipSuccessfulRequests: true,
+});

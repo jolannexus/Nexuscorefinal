@@ -25,6 +25,7 @@ export const SupplierModule = () => {
   const { connections, loading, deleteConnection, syncConnection, syncProducts } = useSuppliers();
   const { profile } = useAuth();
   const [showConnectForm, setShowConnectForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncingProductsId, setSyncingProductsId] = useState<string | null>(null);
   const [configParams, setConfigParams] = useState<{ id?: string, supplierId?: string, connection?: SupplierConnection | null }>({});
@@ -39,7 +40,7 @@ export const SupplierModule = () => {
     try {
       await syncConnection(id);
     } catch (err) {
-      console.error(err);
+      setError('Gagal memuat data provider.');
     } finally {
       setSyncingId(null);
     }
@@ -50,7 +51,7 @@ export const SupplierModule = () => {
     try {
       await syncProducts(id);
     } catch (err) {
-      console.error(err);
+      setError('Gagal melakukan aksi ini.');
     } finally {
       setSyncingProductsId(null);
     }

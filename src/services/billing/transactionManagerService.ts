@@ -12,6 +12,7 @@ export interface OrderCreationResult {
 
 import { eventDispatcher } from '../../events/EventDispatcher';
 import { DomainEvent } from '../../events/types';
+import { financialLogger } from '../../lib/logger';
 
 export class TransactionManagerService {
   /**
@@ -42,7 +43,7 @@ export class TransactionManagerService {
             where: { idempotencyIn: params.idempotencyKey }
           });
           if (existingTx) {
-            console.warn(`[TX_MANAGER] Detected idempotent order submission for token: ${params.idempotencyKey}`);
+            financialLogger.warn(`[TX_MANAGER] Detected idempotent order submission for token: ${params.idempotencyKey}`);
             return {
               success: true,
               orderId: existingTx.id,
@@ -116,7 +117,7 @@ export class TransactionManagerService {
         timeout: 10000
       });
     } catch (err: any) {
-      console.error(`[TX_MANAGER] Transactional order creation aborted or rolled back. Reason:`, err.message);
+      financialLogger.error({ error: err.message }, `[TX_MANAGER] Transactional order creation aborted or rolled back.`);
       return {
         success: false,
         error: err.message || 'TRANSACTION_ROLLBACK'
@@ -137,7 +138,7 @@ export class TransactionManagerService {
         const order = lockedOrders[0];
 
         if (!order || !(order.status === 'PENDING' || order.status === 'PROCESSING')) {
-          console.warn(`[TX_MANAGER] Process violation: Order ${orderId} missing or not in processable state.`);
+          financialLogger.warn(`[TX_MANAGER] Process violation: Order ${orderId} missing or not in processable state.`);
           throw new Error('ORDER_NOT_PROCESSABLE');
         }
 
@@ -183,7 +184,7 @@ export class TransactionManagerService {
 
       return true;
     } catch (err: any) {
-      console.error(`[TX_MANAGER] Fails to complete and settle order ${orderId}:`, err.message);
+      financialLogger.error({ error: err.message }, `[TX_MANAGER] Fails to complete and settle order ${orderId}:`);
       return false;
     }
   }
@@ -201,12 +202,12 @@ export class TransactionManagerService {
         const order = lockedOrders[0];
 
         if (!order) {
-           console.warn(`[TX_MANAGER] Processing error: Order ${orderId} not found.`);
+           financialLogger.warn(`[TX_MANAGER] Processing error: Order ${orderId} not found.`);
            return false;
         }
 
         if (order.status === 'FAILED' || order.status === 'REFUNDED') {
-           console.warn(`[TX_MANAGER] Processing error: Order ${orderId} already rolled back.`);
+           financialLogger.warn(`[TX_MANAGER] Processing error: Order ${orderId} already rolled back.`);
            return false;
         }
 
@@ -269,7 +270,7 @@ export class TransactionManagerService {
 
       return true;
     } catch (err: any) {
-      console.error(`[TX_MANAGER] Failed to rollback/refund order ${orderId}:`, err.message);
+      financialLogger.error({ error: err.message }, `[TX_MANAGER] Failed to rollback/refund order ${orderId}:`);
       return false;
     }
   }
@@ -340,7 +341,7 @@ export class TransactionManagerService {
         }
       }
     } catch (commErr) {
-      console.error('[COMMISSION_DISTRIBUTION_WARNING] Commissions failed to settle:', commErr);
+      financialLogger.error({ error: commErr }, '[COMMISSION_DISTRIBUTION_WARNING] Commissions failed to settle:');
       // We don't bubble commission failures to block main user order settlement
     }
   }

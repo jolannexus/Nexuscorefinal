@@ -46,7 +46,7 @@ export const FulfillmentPipeline = () => {
         setOrderLogs(prev => [data, ...prev].slice(0, 3));
       }
     } catch (error) {
-      console.error("Fulfillment error:", error);
+      
     } finally {
       setTimeout(() => {
         setIsProcessing(false);

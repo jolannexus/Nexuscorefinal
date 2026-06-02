@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 export const IncomingWebhooksTable = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPayload, setSelectedPayload] = useState<any | null>(null);
 
   const fetchLogs = async () => {
@@ -16,7 +17,7 @@ export const IncomingWebhooksTable = () => {
       const data = await response.json();
       setLogs(data.logs || []);
     } catch (err) {
-      console.error('Failed to load incoming webhook logs:', err);
+      setError('Gagal memuat log');
     } finally {
       setLoading(false);
     }

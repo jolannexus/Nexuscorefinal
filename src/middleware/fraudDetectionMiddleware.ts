@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { FraudDetectionService, TransactionContext } from '../domain/fraud/FraudDetectionService';
+import { logger } from '../lib/logger';
 
 export const fraudDetectionMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const tenantId = (req as any).tenantId;
@@ -18,7 +19,7 @@ export const fraudDetectionMiddleware = async (req: Request, res: Response, next
     const isSafe = await FraudDetectionService.isTransactionSafe(context);
     
     if (!isSafe) {
-      console.warn(`[FraudDetectionMiddleware] Unsafe transaction blocked for tenant ${tenantId}. IP: ${ipAddress}`);
+      logger.warn(`[FraudDetectionMiddleware] Unsafe transaction blocked for tenant ${tenantId}. IP: ${ipAddress}`);
       return res.status(403).json({ error: 'TRANSACTION_REJECTED_BY_RISK_ENGINE' });
     }
 
@@ -26,7 +27,7 @@ export const fraudDetectionMiddleware = async (req: Request, res: Response, next
     (req as any).fraudContext = context;
     next();
   } catch (err) {
-    console.error('[FraudDetectionMiddleware] Internal error during risk assessment', err);
+    logger.error({ error: err }, '[FraudDetectionMiddleware] Internal error during risk assessment');
     // Fail closed for security
     return res.status(500).json({ error: 'RISK_ASSESSMENT_FAILED' });
   }

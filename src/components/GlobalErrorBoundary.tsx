@@ -1,5 +1,4 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import * as Sentry from '@sentry/react';
 
 interface Props {
   children: ReactNode;
@@ -7,6 +6,7 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  error?: Error;
 }
 
 export class GlobalErrorBoundary extends Component<Props, State> {
@@ -14,30 +14,28 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     hasError: false
   };
 
-  public static getDerivedStateFromError(_: Error): State {
-    return { hasError: true };
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-    const sentryDsn = (import.meta as any).env?.VITE_SENTRY_DSN;
-    if (sentryDsn) {
-      Sentry.captureException(error, { extra: { errorInfo } });
-    }
+    console.error('Fatal global error:', error, errorInfo);
   }
 
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-          <p className="text-gray-600 mb-6">Our platform encountered an unexpected issue.</p>
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            onClick={() => window.location.reload()}
-          >
-            Reload Application
-          </button>
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-slate-200">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl">
+            <h1 className="text-2xl font-bold text-red-400 mb-4">Fatal Error</h1>
+            <p className="text-slate-400 mb-6">The application encountered an unexpected error. Please refresh the page.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium w-full"
+            >
+              Reload Page
+            </button>
+          </div>
         </div>
       );
     }

@@ -4,6 +4,7 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
 import { trace, context, propagation, SpanStatusCode } from '@opentelemetry/api';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { PrismaInstrumentation } from '@prisma/instrumentation';
+import { logger } from './logger';
 
 const sdk = new NodeSDK({
   traceExporter: new ConsoleSpanExporter(), // Replace with OTLP exporter in real production
@@ -21,8 +22,8 @@ export const startTracing = () => {
 
 process.on('SIGTERM', () => {
   sdk.shutdown()
-    .then(() => console.log('Tracing terminated'))
-    .catch((error) => console.log('Error terminating tracing', error))
+    .then(() => logger.info('Tracing terminated'))
+    .catch((error) => logger.error({ err: error }, 'Error terminating tracing'))
     .finally(() => process.exit(0));
 });
 

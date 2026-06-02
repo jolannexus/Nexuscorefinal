@@ -65,7 +65,7 @@ export const Header = () => {
       await refreshAuth();
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      alert('Logout gagal. Coba lagi.');
     }
   };
 
@@ -75,6 +75,7 @@ export const Header = () => {
     { label: t('navigation.providers', 'Penyedia'), path: '/suppliers', icon: Cpu, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN', 'AGENCY_SUPPLIER_ADMIN'] },
     { label: t('navigation.resellers', 'Penjual'), path: '/resellers', icon: Users, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
     { label: t('navigation.products', 'Produk'), path: '/catalog', icon: Package, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
+    { label: 'Gateway Settings', path: '/payments', icon: CreditCard, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AGENCY', 'AGENCY_ADMIN'] },
     { label: t('navigation.settings', 'Pengaturan'), path: '/system', icon: Settings, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
     { label: t('navigation.ops', 'Pusat Operasional'), path: '/operations', icon: Terminal, roles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'] },
   ];

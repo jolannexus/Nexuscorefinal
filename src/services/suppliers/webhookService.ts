@@ -1,5 +1,6 @@
 import { SupplierStatus } from './types';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 
 export interface WebhookPayload {
   supplier: string;
@@ -10,7 +11,7 @@ export interface WebhookPayload {
 
 export class WebhookService {
   static async handleIncoming(payload: WebhookPayload) {
-    console.log(`[Webhook] Received update from ${payload.supplier} for ${payload.externalOrderId}: ${payload.status}`);
+    logger.info(`[Webhook] Received update from ${payload.supplier} for ${payload.externalOrderId}: ${payload.status}`);
     return { 
       processed: true, 
       orderId: payload.externalOrderId,
@@ -36,7 +37,7 @@ export class WebhookService {
 
     while (attempt < maxRetries) {
       try {
-        console.log(`[WebhookService] Delivering webhook log ${log.id} to ${url} | Attempt ${attempt + 1}/${maxRetries}`);
+        logger.info(`[WebhookService] Delivering webhook log ${log.id} to ${url} | Attempt ${attempt + 1}/${maxRetries}`);
         
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
@@ -57,16 +58,16 @@ export class WebhookService {
         });
 
         if (response.ok) {
-          console.log(`[WebhookService] Webhook delivery successful to ${url} on attempt ${attempt + 1}.`);
+          logger.info(`[WebhookService] Webhook delivery successful to ${url} on attempt ${attempt + 1}.`);
           success = true;
           break;
         } else {
           errorMessage = `HTTP ${response.status}`;
-          console.warn(`[WebhookService] Webhook delivery failed. ${errorMessage}`);
+          logger.warn(`[WebhookService] Webhook delivery failed. ${errorMessage}`);
         }
       } catch (err: any) {
         errorMessage = err.message;
-        console.error(`[WebhookService] Network error delivering webhook: ${errorMessage}`);
+        logger.error(`[WebhookService] Network error delivering webhook: ${errorMessage}`);
       }
 
       attempt++;

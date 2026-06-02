@@ -85,7 +85,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
       const data = await res.json();
       setTrackingResult(data);
     } catch (e: any) {
-      console.error("Tracking lookup error:", e);
+      
       setTrackingError("No order found matching this identification code.");
     } finally {
       setIsTracking(false);
@@ -147,7 +147,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to load products", err);
+        
         setLoading(false);
       });
   }, [tenant?.id, tenantLoading]);

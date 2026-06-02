@@ -18,7 +18,7 @@ export const resellerService = {
       }
       return [];
     } catch (error) {
-      console.error('Failed to get resellers:', error);
+      if ((import.meta as any).env.DEV) console.error('Failed to get resellers:', error);
       return [];
     }
   },
@@ -62,7 +62,7 @@ export const resellerService = {
    * Blocks or suspends reseller node access permissions.
    */
   async updateResellerStatus(agencyId: string, id: string, status: 'ACTIVE' | 'SUSPENDED'): Promise<void> {
-    console.info(`Status update requested for reseller ${id}: ${status}`);
+    if ((import.meta as any).env.DEV) console.info(`Status update requested for reseller ${id}: ${status}`);
   },
 
   /**
@@ -78,7 +78,7 @@ export const resellerService = {
         }
       });
     } catch (error) {
-      console.error('Failed to delete reseller:', error);
+      if ((import.meta as any).env.DEV) console.error('Failed to delete reseller:', error);
     }
   }
 };

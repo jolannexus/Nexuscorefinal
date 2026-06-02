@@ -3,9 +3,9 @@ import { SupplierResponse, SupplierOrderResult } from './types';
 import { prisma } from '../../lib/prisma';
 import { supplierRegistry } from '../../adapters/suppliers/registry';
 import { metrics } from '../../utils/metrics';
-import { logger } from '../../utils/logger';
 import { eventDispatcher } from '../../events/EventDispatcher';
 import { DomainEvent } from '../../events/types';
+import { logger } from '../../lib/logger';
 
 export interface ProviderTelemetry {
   supplierName: string;
@@ -92,7 +92,7 @@ export class ProviderSelector {
   public quarantineProvider(agencyId: string, supplierName: string, durationMs: number = 5 * 60 * 1000): void {
     const key = this.getCacheKey(agencyId, supplierName);
     this.quarantineStore.set(key, Date.now() + durationMs);
-    console.warn(`[Quarantine] Provider ${supplierName.toUpperCase()} quarantined for ${durationMs / 1000}s`);
+    logger.warn(`[Quarantine] Provider ${supplierName.toUpperCase()} quarantined for ${durationMs / 1000}s`);
   }
 
   /**
@@ -256,10 +256,7 @@ export class ProviderSelector {
     if (telemetry.consecutiveFailures >= 3) {
       // Impose cool down for 5 minutes
       telemetry.cooldownUntil = Date.now() + 5 * 60 * 1000;
-      logger.warn(`[CircuitBreaker] Provider ${supplierName.toUpperCase()} tripped cooldown for 5m due to consecutive failures.`, {
-         supplier: supplierName, 
-         agencyId
-      });
+      logger.warn({ supplier: supplierName, agencyId }, `[CircuitBreaker] Provider ${supplierName.toUpperCase()} tripped cooldown for 5m due to consecutive failures.`);
       metrics.increment('supplier.circuitbreaker.tripped', { supplier: supplierName });
     }
 
@@ -361,7 +358,7 @@ export class ProviderSelector {
       const supplierNameUpper = connection.supplierName.toUpperCase();
       triedSupplierNames.add(supplierNameUpper);
 
-      console.info(`[FailoverEngine] Selected provider ${connection.supplierName} with score ${best.score.finalScore}`);
+      logger.info(`[FailoverEngine] Selected provider ${connection.supplierName} with score ${best.score.finalScore}`);
 
       const startTime = Date.now();
       let result: SupplierResponse<SupplierOrderResult>;
@@ -410,7 +407,7 @@ export class ProviderSelector {
               }
             });
           } catch (logErr) {
-            console.error('[ProviderSelector] Failed to log failover swap:', logErr);
+            logger.error({ error: logErr }, '[ProviderSelector] Failed to log failover swap:');
           }
         }
 
@@ -421,7 +418,7 @@ export class ProviderSelector {
       } else {
         // 3. Failed provider detected
         const errorMsg = result.error || 'Provider rejected request';
-        console.warn(`[FailoverEngine] FAILED attempt with ${connection.supplierName}: ${errorMsg}`);
+        logger.warn(`[FailoverEngine] FAILED attempt with ${connection.supplierName}: ${errorMsg}`);
 
         // Register failure in metrics
         this.recordFailure(connection.supplierName, agencyId, errorMsg);
@@ -439,7 +436,7 @@ export class ProviderSelector {
             timestamp: new Date().toISOString()
           });
         } catch (dispatchErr) {
-          console.error('[ProviderSelector] Failed to dispatch SUPPLIER_FAILED event:', dispatchErr);
+          logger.error({ error: dispatchErr }, '[ProviderSelector] Failed to dispatch SUPPLIER_FAILED event:');
         }
 
         attemptsLog.push({
@@ -479,7 +476,7 @@ export class ProviderSelector {
         });
       }
     } catch (err) {
-      console.error('[ProviderSelector] Error syncing telemetry to Postgres:', err);
+      logger.error({ error: err }, '[ProviderSelector] Error syncing telemetry to Postgres:');
     }
   }
 }

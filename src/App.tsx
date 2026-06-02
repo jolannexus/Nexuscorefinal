@@ -51,7 +51,7 @@ const safeLazy = (importFunction: () => Promise<any>) =>
       clearReloadCount();
       return module;
     } catch (error: any) {
-      console.error("Chunk loading failed:", error);
+      
       
       const isChunkLoadError = 
         error?.name === 'ChunkLoadError' || 
@@ -59,7 +59,7 @@ const safeLazy = (importFunction: () => Promise<any>) =>
         
       if (isChunkLoadError && !isReloadThrottled()) {
         incrementReloadCount();
-        console.warn("Attempting recovery reload due to chunk load failure...");
+        
         window.location.reload();
         return { default: () => <div /> };
       }
@@ -128,6 +128,11 @@ const AppRoutes = () => {
   const location = useLocation();
 
   React.useEffect(() => {
+    const logger = {
+      info: (...args: any[]) => console.info(...args),
+      warn: (...args: any[]) => console.warn(...args),
+      error: (...args: any[]) => console.error(...args),
+    };
     const checkVersion = async () => {
       try {
         const response = await fetch('/api/health');
@@ -136,7 +141,7 @@ const AppRoutes = () => {
           // Save server boot timestamp; if it changes unexpectedly during session, pre-emptively notify
           const activeBoot = localStorage.getItem('nexus_server_boot');
           if (activeBoot && data.timestamp && activeBoot !== data.timestamp) {
-            console.log("New server deployment detected. Pre-emptive cache clear in progress...");
+            logger.info("New server deployment detected. Pre-emptive cache clear in progress...");
             localStorage.setItem('nexus_server_boot', data.timestamp);
           } else if (data.timestamp) {
             localStorage.setItem('nexus_server_boot', data.timestamp);

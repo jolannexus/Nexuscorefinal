@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { PermissionEngine } from '../domain/auth/PermissionEngine';
 import { Permission } from '../domain/auth/PermissionTypes';
 import { AuthenticatedRequest } from './auth';
+import { logger } from '../lib/logger';
 
 export const requirePermission = (permission: Permission) => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -10,7 +11,7 @@ export const requirePermission = (permission: Permission) => {
     }
 
     if (!PermissionEngine.hasPermission(req.user.role as any, permission)) {
-      console.warn(`[Security] Permission denied. Role: ${req.user.role}, Permission Required: ${permission}`);
+      logger.warn(`[Security] Permission denied. Role: ${req.user.role}, Permission Required: ${permission}`);
       return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
     }
 

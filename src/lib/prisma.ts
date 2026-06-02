@@ -10,14 +10,10 @@ function cleanDatabaseUrl(url: string | undefined): string | undefined {
     cleaned = cleaned.replace(/\[(.*?)\]/, (_, p1) => encodeURIComponent(p1));
   }
   
-  // Ensure host db.tymrypisfoskisfklnqb.supabase.co uses port 6543 instead of 5432
-  if (cleaned.includes('db.tymrypisfoskisfklnqb.supabase.co')) {
-    cleaned = cleaned.replace(':5432', ':6543');
-  }
-  
   return cleaned;
 }
 
+// DATABASE_URL harus dikonfigurasi melalui file .env
 // Ensure connection parameters are sanitized and cleaned before Prisma Client parses them
 process.env.DATABASE_URL = cleanDatabaseUrl(process.env.DATABASE_URL);
 process.env.DIRECT_URL = cleanDatabaseUrl(process.env.DIRECT_URL);

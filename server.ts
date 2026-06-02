@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import * as Sentry from "@sentry/node";
 import path from "path";
 import fs from "fs";
@@ -28,6 +29,7 @@ import {
 import { requirePermission } from "./src/middleware/requirePermission";
 import { idempotencyMiddleware } from "./src/middleware/idempotency";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 import { TenantCacheService } from "./src/services/tenant/TenantCacheService";
 import { LedgerEngine, LedgerAccountType } from "./src/services/financial/LedgerEngine";
 
@@ -36,7 +38,7 @@ import { WebhookService } from "./src/services/suppliers/webhookService";
 import { BalanceManager } from "./src/services/financial/BalanceManager";
 import { QRISService } from "./src/services/payment/QRISService";
 import { VirtualAccountService } from "./src/services/payment/VirtualAccountService";
-import { globalApiLimiter } from "./src/middleware/rateLimit";
+import { globalApiLimiter, authRouteLimiter, loginStrictLimiter } from "./src/middleware/rateLimit";
 import { register } from "./src/lib/metrics";
 import { GoogleGenAI } from "@google/genai";
 import { eventDispatcher } from "./src/events/EventDispatcher";
@@ -72,10 +74,22 @@ async function startServer() {
 
   const app = express();
   app.set("trust proxy", 1); // Trust first proxy for rate limiting (X-Forwarded-For)
+  
+  app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+    credentials: true,
+    methods: ['GET','POST','PUT','PATCH','DELETE']
+  }));
+
   const PORT = env.PORT;
 
   // Expose Prometheus metrics
   app.get("/metrics", async (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token || token !== process.env.METRICS_SECRET) {
+      logger.warn({ ip: req.ip }, '[SECURITY] Unauthorized access attempt to /metrics');
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     try {
       res.set("Content-Type", register.contentType);
       res.end(await register.metrics());
@@ -210,6 +224,8 @@ async function startServer() {
           slug: tenant.slug,
           domain: tenant.customDomain || undefined,
           status: tenant.status,
+          operationMode: tenant.operationMode,
+          subscriptionEnd: tenant.subscriptionEnd,
           theme: branding.theme || { primary: '#111827', secondary: '#4B5563', accent: '#3B82F6' },
           ...branding
         };
@@ -219,7 +235,7 @@ async function startServer() {
 
       next();
     } catch (error) {
-      console.error("[DATABASE_OFFLINE_WARNING] Database connection not found or offline:", error);
+      logger.error({ error }, "[DATABASE_OFFLINE_WARNING] Database connection not found or offline");
       return res.status(503).json({ error: "Service unavailable due to database maintenance" });
     }
   });
@@ -253,7 +269,7 @@ async function startServer() {
 
       res.json({ snippet: response.text });
     } catch (error: any) {
-      console.error("Gemini API Error:", error);
+      logger.error({ error }, "Gemini API Error");
       res.status(500).json({ error: error.message || "Failed to generate documentation snippet" });
     }
   });
@@ -331,6 +347,31 @@ async function startServer() {
     }
   });
 
+  // Operation Mode update
+  app.put("/api/tenants/:id/operation-mode", requireAuth, requireTenant, requirePermission('tenant.settings.update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { operationMode } = req.body;
+      
+      if (!['MANAGED_DEPOSIT', 'BYO_SUPPLIER'].includes(operationMode)) {
+         return res.status(400).json({ error: 'Invalid operation mode' });
+      }
+
+      const t = await prisma.tenant.update({
+        where: { id },
+        data: {
+          operationMode,
+          subscriptionEnd: operationMode === 'BYO_SUPPLIER' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null
+        }
+      });
+      await TenantCacheService.invalidateTenant(t);
+      res.json({ success: true, operationMode: t.operationMode });
+    } catch (error: any) {
+      logger.error({ error }, "Unexpected error");
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Payment settings update
   app.put("/api/tenants/:id/payment", requireAuth, requireTenant, requirePermission('tenant.settings.update'), async (req, res) => {
     try {
@@ -347,8 +388,9 @@ async function startServer() {
     }
   });
 
+
   // 1. Authenticated User Registration (PostgreSQL + Prisma)
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authRouteLimiter, async (req, res) => {
     const { email, password, displayName, role, tenantId } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
@@ -360,7 +402,7 @@ async function startServer() {
         return res.status(400).json({ error: "User already registered" });
       }
 
-      const hash = crypto.createHash('sha256').update(password).digest('hex');
+      const hash = await bcrypt.hash(password, 12);
       
       let assignedRole = "RESELLER";
       if (email === "jolan01feb@gmail.com" || email.includes("admin")) {
@@ -406,7 +448,7 @@ async function startServer() {
           frozenBalance: 0.00
         }
       }).catch(err => {
-        console.warn("Wallet creation warning:", err.message);
+        logger.warn({ error: err }, "Wallet creation warning");
       });
 
       const token = generateToken({
@@ -427,13 +469,13 @@ async function startServer() {
         }
       });
     } catch (error: any) {
-      console.error("PostgreSQL registration failed:", error);
+      logger.error({ error }, "PostgreSQL registration failed");
       res.status(500).json({ error: error.message || "Failed to register user" });
     }
   });
 
   // 2. Authenticated User Login (PostgreSQL + Prisma)
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginStrictLimiter, authRouteLimiter, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
@@ -445,8 +487,8 @@ async function startServer() {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const hash = crypto.createHash('sha256').update(password).digest('hex');
-      if (user.passwordHash !== hash) {
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
@@ -484,8 +526,79 @@ async function startServer() {
         }
       });
     } catch (error: any) {
-      console.error("PostgreSQL login failed:", error);
+      logger.error({ error }, "PostgreSQL login failed");
       res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/forgot-password", authRouteLimiter, async (req, res) => {
+    // 1. Ambil email dari body
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    
+    try {
+      // 2. Validasi email ada (tapi SELALU return pesan yang sama)
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user) {
+        // 3. Jika user ada: generate token 32 bytes, simpan ke Redis dengan TTL 1 jam
+        const token = crypto.randomBytes(32).toString('hex');
+        const { getRedisClient } = await import("./src/lib/redis");
+        const redis = getRedisClient();
+        await redis.set(`pwd_reset:${token}`, user.id, "EX", 3600);
+        
+        // 4. Di development: log token ke logger.info (untuk testing)
+        logger.info({ email: user.email, resetToken: token }, "[SECURITY] Password reset token generated");
+      }
+      
+      // 5. Return pesan statis
+      res.json({ message: "Jika email terdaftar, instruksi reset telah dikirim" });
+    } catch (error: any) {
+      logger.error({ err: error }, "Forgot password error");
+      res.status(500).json({ error: "Forgot password failed" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", authRouteLimiter, async (req, res) => {
+    // 1. Ambil token dan newPassword dari body
+    const { token, newPassword } = req.body;
+    
+    // 2. Validasi keduanya ada, newPassword minimal 8 karakter
+    if (!token || !newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: "Token and new password required (min 8 characters)" });
+    }
+    
+    try {
+      const { getRedisClient } = await import("./src/lib/redis");
+      const redis = getRedisClient();
+      
+      // 3. Cari userId dari Redis key: pwd_reset:{token}
+      const userId = await redis.get(`pwd_reset:${token}`);
+      
+      // 4. Jika tidak ada / expired: return 400
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid or expired token" });
+      }
+      
+      // 5. Hash password baru dengan bcrypt (cost 12)
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      
+      // 6. Update passwordHash di database
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash }
+      });
+      
+      // 7. Hapus token dari Redis
+      await redis.del(`pwd_reset:${token}`);
+      
+      // 8. Return log dan response
+      logger.info({ userId }, "[SECURITY] Password successfully reset");
+      res.json({ message: "Password berhasil diperbarui" });
+    } catch (error: any) {
+      logger.error({ err: error }, "Reset password error");
+      res.status(500).json({ error: "Reset password failed" });
     }
   });
 
@@ -538,7 +651,7 @@ async function startServer() {
         });
         res.json(connections);
       } catch (error: any) {
-        console.error("Failed to list supplier connections:", error);
+        logger.error({ error }, "Failed to list supplier connections");
         res.status(500).json({ error: "Failed to load supplier connections" });
       }
     }
@@ -590,7 +703,7 @@ async function startServer() {
           credentials: supplier.credentials
         });
       } catch (error: any) {
-        console.error("Failed to save supplier connection:", error);
+        logger.error({ error }, "Failed to save supplier connection");
         res.status(500).json({ error: "Failed to save connection" });
       }
     }
@@ -615,7 +728,7 @@ async function startServer() {
         });
         res.json({ success: true });
       } catch (error: any) {
-        console.error("Failed to delete supplier connection:", error);
+        logger.error({ error }, "Failed to delete supplier connection");
         res.status(500).json({ error: "Failed to delete connection" });
       }
     }
@@ -639,7 +752,7 @@ async function startServer() {
         const validation = await adapter.validateCredentials(credentials);
         res.json(validation);
       } catch (error: any) {
-        console.error("Supplier Validation Error:", error);
+        logger.error({ error }, "Supplier Validation Error");
         res.status(500).json({ isValid: false, message: error.message });
       }
     },
@@ -678,7 +791,7 @@ async function startServer() {
             });
         }
       } catch (error: any) {
-        console.error("Fetch Balance Error:", error);
+        logger.error({ error }, "Fetch Balance Error");
         res.status(500).json({ error: error.message });
       }
     },
@@ -710,7 +823,7 @@ async function startServer() {
         const products = await adapter.getProducts();
         res.json({ products });
       } catch (error: any) {
-        console.error("Fetch Products Error:", error);
+        logger.error({ error }, "Fetch Products Error");
         res.status(500).json({ error: error.message });
       }
     },
@@ -777,7 +890,7 @@ async function startServer() {
 
         res.json({ success: true, healthList: healthData });
       } catch (error: any) {
-        console.error("Supplier Health Check Error:", error);
+        logger.error({ error }, "Supplier Health Check Error");
         res.status(500).json({ error: error.message });
       }
     }
@@ -796,7 +909,7 @@ async function startServer() {
         const report = await ReconciliationService.runReconciliation(agencyId, !!autoHeal);
         res.json({ success: true, report });
       } catch (error: any) {
-        console.error("Reconciliation Run Error:", error);
+        logger.error({ error }, "Reconciliation Run Error");
         res.status(500).json({ error: error.message });
       }
     }
@@ -816,7 +929,7 @@ async function startServer() {
         });
         res.json({ success: true, alerts: drifts });
       } catch (err: any) {
-        console.error("Failed to fetch alerts:", err);
+        logger.error({ error: err }, "Failed to fetch alerts");
         res.status(500).json({ error: err.message });
       }
     }
@@ -900,7 +1013,7 @@ async function startServer() {
       }));
       res.json(mapped);
     } catch (error) {
-      console.error("Failed to load products from DB:", error);
+      logger.error({ error }, "Failed to load products from DB");
       res.status(500).json({ error: "Failed to load products" });
     }
   });
@@ -923,7 +1036,7 @@ async function startServer() {
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Failed to toggle product:", error);
+      logger.error({ error }, "Failed to toggle product");
       res.status(500).json({ error: "Failed to update product state" });
     }
   });
@@ -946,7 +1059,7 @@ async function startServer() {
       }));
       res.json(mapped);
     } catch (error) {
-      console.error("Failed to list resellers from DB:", error);
+      logger.error({ error }, "Failed to list resellers from DB");
       res.status(500).json({ error: "Failed to load partners" });
     }
   });
@@ -959,10 +1072,13 @@ async function startServer() {
     try {
       let user = await prisma.user.findUnique({ where: { email } });
       if (!user) {
+        const generatedPassword = crypto.randomBytes(16).toString('hex');
+        logger.warn({ email, role: "RESELLER" }, "Auto-generated secure password for new SSO/fallback user.");
+        const seedHash = await bcrypt.hash(generatedPassword, 12);
         user = await prisma.user.create({
           data: {
             email,
-            passwordHash: crypto.createHash('sha256').update('123456').digest('hex'),
+            passwordHash: seedHash,
             displayName: name || email.split("@")[0],
             role: "RESELLER",
             tenantId: (req as any).agency.id
@@ -1025,7 +1141,7 @@ async function startServer() {
         createdAt: user.createdAt.toISOString()
       });
     } catch (error) {
-      console.error("Failed to scale reseller:", error);
+      logger.error({ error }, "Failed to scale reseller");
       res.status(500).json({ error: "Failed to configure reseller status" });
     }
   });
@@ -1037,7 +1153,7 @@ async function startServer() {
       });
       res.json({ success: true });
     } catch (error) {
-      console.error("Failed to delete reseller:", error);
+      logger.error({ error }, "Failed to delete reseller");
       res.status(500).json({ error: "Failed to delete" });
     }
   });
@@ -1061,7 +1177,7 @@ async function startServer() {
       });
       res.json({ success: true, result });
     } catch (err: any) {
-      console.error("Failed to adjust reseller balance:", err);
+      logger.error({ error: err }, "Failed to adjust reseller balance");
       res.status(500).json({ error: err.message || "Failed to adjust balance" });
     }
   });
@@ -1073,7 +1189,7 @@ async function startServer() {
       const data = await BillingServiceServer.getPendingDeposits((req as any).agency.id);
       res.json(data);
     } catch (err: any) {
-      console.error("Failed to get pending deposits:", err);
+      logger.error({ error: err }, "Failed to get pending deposits");
       res.status(500).json({ error: err.message || "Failed to load pending deposits" });
     }
   });
@@ -1093,7 +1209,7 @@ async function startServer() {
       });
       res.json({ success: result });
     } catch (err: any) {
-      console.error("Failed to request deposit:", err);
+      logger.error({ error: err }, "Failed to request deposit");
       res.status(500).json({ error: err.message || "Failed to submit deposit request" });
     }
   });
@@ -1113,7 +1229,7 @@ async function startServer() {
       const result = await BillingServiceServer.approveDeposit(transaction);
       res.json({ success: true, result });
     } catch (err: any) {
-      console.error("Failed to approve deposit:", err);
+      logger.error({ error: err }, "Failed to approve deposit");
       res.status(500).json({ error: err.message || "Failed to approve deposit" });
     }
   });
@@ -1132,7 +1248,7 @@ async function startServer() {
       const result = await BillingServiceServer.rejectDeposit(agencyId, id);
       res.json({ success: true });
     } catch (err: any) {
-      console.error("Failed to reject deposit:", err);
+      logger.error({ error: err }, "Failed to reject deposit");
       res.status(500).json({ error: err.message || "Failed to reject deposit" });
     }
   });
@@ -1154,7 +1270,7 @@ async function startServer() {
         });
         res.json({ success: true, journals });
       } catch (error: any) {
-        console.error("Ledger Fetch Error:", error);
+        logger.error({ error }, "Ledger Fetch Error");
         res.status(500).json({ error: error.message });
       }
     }
@@ -1176,7 +1292,7 @@ async function startServer() {
         });
         res.json({ success: true, records });
       } catch (error: any) {
-        console.error("Reconciliation Records Fetch Error:", error);
+        logger.error({ error }, "Reconciliation Records Fetch Error");
         res.status(500).json({ error: error.message });
       }
     }
@@ -1294,7 +1410,7 @@ async function startServer() {
 
         res.json(result);
       } catch (error: any) {
-        console.error("Force Reconcile Error:", error);
+        logger.error({ error }, "Force Reconcile Error");
         res.status(500).json({ error: error.message || "Failed to force reconcile" });
       }
     }
@@ -1319,7 +1435,7 @@ async function startServer() {
         });
         res.json({ success: true, logs });
       } catch (error: any) {
-        console.error("Financial Audit Logs Fetch Error:", error);
+        logger.error({ error }, "Financial Audit Logs Fetch Error");
         res.status(500).json({ error: error.message });
       }
     }
@@ -1337,7 +1453,7 @@ async function startServer() {
         const verification = await LedgerAuditService.verifyAuditTrailIntegrity(agencyId);
         res.json({ success: true, ...verification });
       } catch (error: any) {
-        console.error("Verify Audit Trail Integrity Error:", error);
+        logger.error({ error }, "Verify Audit Trail Integrity Error");
         res.status(500).json({ error: error.message });
       }
     }
@@ -1388,7 +1504,7 @@ async function startServer() {
 
       res.json(txs);
     } catch (err) {
-      console.error("Failed to fetch wallet transactions", err);
+      logger.error({ error: err }, "Failed to fetch wallet transactions");
       res.status(500).json({ error: "Failed to fetch transactions" });
     }
   });
@@ -1470,7 +1586,7 @@ async function startServer() {
 
       res.json(processed);
     } catch (err: any) {
-      console.error("Order Fetch Error:", err);
+      logger.error({ error: err }, "Order Fetch Error");
       res.status(500).json({ error: err.message });
     }
   });
@@ -1508,7 +1624,7 @@ async function startServer() {
 
       res.json(result);
     } catch (err: any) {
-      console.error("Order Creation Error:", err);
+      logger.error({ error: err }, "Order Creation Error");
       res.status(500).json({ error: err.message });
     }
   });
@@ -1537,7 +1653,7 @@ async function startServer() {
         return res.status(404).json({ error: "Order not found or tenant mismatch" });
       }
 
-      console.log(
+      logger.info(
         `[PIPELINE_ENGINE] Processing Order: ${orderId} on Tenant: ${agencyId}`,
       );
 
@@ -1576,7 +1692,7 @@ async function startServer() {
             return res.status(500).json({ error: "Fulfillment queue dispatch failed" });
           }
         } catch (queueErr: any) {
-          console.error("Fulfillment Queue error:", queueErr);
+          logger.error({ error: queueErr }, "Fulfillment Queue error");
           // Failsafe: Hard revert status as the order never entered the durable queue
           await prisma.transaction.update({
              where: { id: orderId },
@@ -1585,7 +1701,7 @@ async function startServer() {
           return res.status(500).json({ error: "Fulfillment infrastructure disabled or offline: " + queueErr.message });
         }
       } catch (error: any) {
-        console.error("General Process API error:", error);
+        logger.error({ error }, "General Process API error");
         res.status(500).json({ error: error.message });
       }
     },
@@ -1596,7 +1712,7 @@ async function startServer() {
     "/api/webhooks/digiflazz",
     verifyWebhookSignature("DIGIFLAZZ_SECRET"),
     async (req, res) => {
-      console.log("Verified Digiflazz Webhook Payload:", req.body);
+      logger.info({ body: req.body }, "Verified Digiflazz Webhook Payload:");
       const data = req.body?.data;
       if (!data || !data.ref_id) {
         return res.status(400).json({ error: "Invalid payload layout" });
@@ -1638,7 +1754,7 @@ async function startServer() {
                }
             }
           } catch (logErr) {
-            console.error("Failed to log supplier callback:", logErr);
+            logger.error({ error: logErr }, "Failed to log supplier callback");
           }
         }
 
@@ -1689,7 +1805,7 @@ async function startServer() {
         
         res.json({ success: true });
       } catch (err: any) {
-        console.error("Webhook callback processing failed:", err);
+        logger.error({ error: err }, "Webhook callback processing failed");
         res.status(500).json({ error: "Webhook resolution failed" });
       }
     },
@@ -1728,7 +1844,7 @@ async function startServer() {
 
         res.json({ success: true, journalId: journal.id, message: "Funds deposited successfully via Ledger Double-Entry" });
       } catch (err: any) {
-        console.error("Ledger Deposit failed:", err);
+        logger.error({ error: err }, "Ledger Deposit failed");
         res.status(500).json({ error: err.message || "Ledger deposit operations failed" });
       }
     }
@@ -1766,7 +1882,7 @@ async function startServer() {
 
         res.json({ success: true, journalId: journal.id, message: "Funds withdrawn successfully via Ledger Double-Entry" });
       } catch (err: any) {
-        console.error("Ledger Withdrawal failed:", err);
+        logger.error({ error: err }, "Ledger Withdrawal failed");
         res.status(400).json({ error: err.message || "Ledger withdrawal operations failed" });
       }
     }
@@ -2169,7 +2285,7 @@ async function startServer() {
 
         res.json({ success: true, settlementId: settlement.id, message: "Settlement flow initiated and held in Escrow" });
       } catch (err: any) {
-        console.error("Initiate Settlement failed:", err);
+        logger.error({ error: err }, "Initiate Settlement failed");
         res.status(500).json({ error: err.message || "Settlement initiation failed" });
       }
     }
@@ -2199,7 +2315,7 @@ async function startServer() {
 
         res.json({ success: true, settlementId: settlement.id, message: "Settlement successfully committed and paid" });
       } catch (err: any) {
-        console.error("Commit Settlement failed:", err);
+        logger.error({ error: err }, "Commit Settlement failed");
         res.status(500).json({ error: err.message || "Settlement commitment failed" });
       }
     }
@@ -2230,7 +2346,7 @@ async function startServer() {
 
         res.json({ success: true, settlementId: settlement.id, message: "Settlement successfully rolled back and escrow refunded" });
       } catch (err: any) {
-        console.error("Rollback Settlement failed:", err);
+        logger.error({ error: err }, "Rollback Settlement failed");
         res.status(500).json({ error: err.message || "Settlement rollback failed" });
       }
     }
@@ -2249,7 +2365,7 @@ async function startServer() {
         const report = await FinancialIntegrityService.performIntegrityAudit(tenantId);
         res.json({ success: true, report });
       } catch (err: any) {
-        console.error("Financial Integrity validation failed:", err);
+        logger.error({ error: err }, "Financial Integrity validation failed");
         res.status(500).json({ error: err.message || "Financial integrity scan failed" });
       }
     }
@@ -2323,7 +2439,7 @@ async function startServer() {
   // Vite middleware or static serving configuration
   const distPath = path.join(process.cwd(), "dist");
   const indexPath = path.join(distPath, "index.html");
-  console.log(`[DEBUG] CWD: ${process.cwd()}, DistPath: ${distPath}, IndexExists: ${fs.existsSync(indexPath)}`);
+  logger.debug(`[DEBUG] CWD: ${process.cwd()}, DistPath: ${distPath}, IndexExists: ${fs.existsSync(indexPath)}`);
   const isProd = process.env.NODE_ENV === "production" && fs.existsSync(indexPath);
   
   // Start background workers asynchronously
@@ -2380,7 +2496,7 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   } else {
-    console.log("[SERVER] Starting in development mode: mounting dynamic Vite middleware...");
+    logger.info("[SERVER] Starting in development mode: mounting dynamic Vite middleware...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

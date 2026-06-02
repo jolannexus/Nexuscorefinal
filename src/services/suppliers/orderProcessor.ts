@@ -3,6 +3,7 @@ import { SupplierStatus, SupplierResponse, SupplierOrderResult } from './types';
 import { Order, Product, SupplierConnection } from '../../types';
 import { ProviderSelector } from './providerSelector';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 
 export class OrderProcessor {
   /**
@@ -18,7 +19,7 @@ export class OrderProcessor {
     agencyId?: string;
   }): Promise<SupplierResponse<SupplierOrderResult>> {
     const agencyId = params.agencyId || params.order.agencyId || params.primaryConnection.agencyId;
-    console.log(`[OrderProcessor] Initializing orchestration for order ${params.order.id} (Product: ${params.product.name})`);
+    logger.info(`[OrderProcessor] Initializing orchestration for order ${params.order.id} (Product: ${params.product.name})`);
 
     // 1. Gather all potential supplier connection candidates
     let candidates: SupplierConnection[] = params.connections || [];
@@ -66,7 +67,7 @@ export class OrderProcessor {
             });
           }
         } catch (discErr) {
-          console.warn('[OrderProcessor] Active supplier discovery bypass/error:', discErr);
+          logger.warn({ error: discErr }, '[OrderProcessor] Active supplier discovery bypass/error:');
         }
       }
     }
@@ -110,7 +111,7 @@ export class OrderProcessor {
 
       return response;
     } catch (err: any) {
-      console.error(`[OrderProcessor] Execution error on ${connection.supplierName}:`, err.message);
+      logger.error({ error: err.message }, `[OrderProcessor] Execution error on ${connection.supplierName}:`);
       return { success: false, error: err.message || 'Unknown Supplier Error' };
     }
   }

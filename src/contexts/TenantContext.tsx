@@ -38,7 +38,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           );
         }
       } catch (error) {
-        console.error('Resilient safety trap: failed resolving tenant context:', error);
+        
         setIsNotFound(false);
       } finally {
         setIsLoading(false);

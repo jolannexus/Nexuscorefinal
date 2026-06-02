@@ -3,6 +3,7 @@ import { SupplierStatus } from '../suppliers/types';
 import { LedgerService } from '../billing/ledgerService';
 import { Order, Product, SupplierConnection } from '../../types';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 import { TransactionManagerService } from '../billing/transactionManagerService';
 
 export interface TopupJobPayload {
@@ -18,7 +19,7 @@ export class TopupJobProcessor {
    */
   public static async process(payload: TopupJobPayload): Promise<void> {
     const { orderId, agencyId } = payload;
-    console.log(`[TopupJobProcessor] [Worker] Processing Order: ${orderId} for Agency: ${agencyId}`);
+    logger.info(`[TopupJobProcessor] [Worker] Processing Order: ${orderId} for Agency: ${agencyId}`);
 
     // 1. Get Order Document via Prisma
     const orderRecord = await prisma.transaction.findUnique({
@@ -36,7 +37,7 @@ export class TopupJobProcessor {
     }
 
     if (orderRecord.status !== 'PENDING' && orderRecord.status !== 'PROCESSING') {
-      console.log(`[TopupJobProcessor] Aborting. Order ${orderId} is in status ${orderRecord.status}`);
+      logger.info(`[TopupJobProcessor] Aborting. Order ${orderId} is in status ${orderRecord.status}`);
       return;
     }
 
@@ -99,7 +100,7 @@ export class TopupJobProcessor {
 
     if (activeSuppliers.length === 0) {
       await TransactionManagerService.failAndRefundOrder(orderId, order.resellerId!, agencyId, 'No active supplier connection configured');
-      console.error(`[TopupJobProcessor] Order ${orderId} failed: No active supplier connection. Job aborted cleanly.`);
+      logger.error(`[TopupJobProcessor] Order ${orderId} failed: No active supplier connection. Job aborted cleanly.`);
       return;
     }
 
@@ -143,13 +144,13 @@ export class TopupJobProcessor {
               updatedAt: new Date()
            }
          });
-         console.log(`[TopupJobProcessor] Fulfillment complete for order ${orderId}`);
+         logger.info(`[TopupJobProcessor] Fulfillment complete for order ${orderId}`);
       } else {
         throw new Error(`Settlement failed for order ${orderId} - Potential concurrency hit`);
       }
 
     } else {
-      console.warn(`[TopupJobProcessor] Fulfillment error for order ${orderId}: ${response.error}`);
+      logger.warn(`[TopupJobProcessor] Fulfillment error for order ${orderId}: ${response.error}`);
       throw new Error(`Supplier fulfillment failed: ${response.error}`);
     }
   }

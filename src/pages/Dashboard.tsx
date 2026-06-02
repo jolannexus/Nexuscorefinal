@@ -99,11 +99,14 @@ const StatCard = ({ label, value, trend, icon: Icon, trendUp }: any) => (
   </Card>
 );
 
+import { useTenant } from '../contexts/TenantContext';
+import { SaaSModelManager } from '../modules/System/SaaSModelManager';
 import { useTranslation } from 'react-i18next';
 import { OnboardingWidget } from '../components/dashboard/OnboardingWidget';
 import { MiniLedger } from '../components/dashboard/MiniLedger';
 
 export const Dashboard = () => {
+  const { tenant } = useTenant();
   const { t } = useTranslation();
   diagnostics.logRender('Dashboard');
   const navigate = useNavigate();
@@ -155,12 +158,12 @@ export const Dashboard = () => {
           }, 10000);
         }
       } catch (err) {
-        console.error('Error parsing SSE event in Dashboard:', err);
+        
       }
     };
 
     eventSource.onerror = (err) => {
-      console.warn('Real-time notification stream error (retrying):', err);
+      
     };
 
     return () => {
@@ -621,7 +624,10 @@ export const Dashboard = () => {
             {t('dashboard.title')}
           </h2>
           <p className="text-[13px] text-slate-500 font-medium mt-1">
-            Status: <span className="text-emerald-500">Online</span> &bull; Agency: {profile?.agencyId || 'Primary'}{role !== 'AGENCY' && role !== 'SUPER_ADMIN' && ` • Role: ${role?.replace('_', ' ')}`}
+            Status: <span className="text-emerald-500">Online</span> &bull; 
+            Agency: {profile?.agencyId || 'Primary'} &bull; 
+            Mode: <span className="text-blue-400 font-semibold">{tenant?.operationMode?.replace('_', ' ') || 'MANAGED DEPOSIT'}</span>
+            {role !== 'AGENCY' && role !== 'SUPER_ADMIN' && ` • Role: ${role?.replace('_', ' ')}`}
           </p>
         </div>
         <div className="flex gap-3">
@@ -642,6 +648,12 @@ export const Dashboard = () => {
       </motion.div>
 
       <OnboardingWidget />
+
+      {(role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN' || role === 'AGENCY') && (
+         <div className="mb-6">
+           <SaaSModelManager />
+         </div>
+      )}
 
       {/* Main Grid */}
       <motion.div 

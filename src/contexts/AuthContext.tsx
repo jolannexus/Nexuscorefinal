@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setProfile(null);
       }
     } catch (error) {
-      console.error('Error refreshing active session:', error);
+      
     } finally {
       setLoading(false);
     }

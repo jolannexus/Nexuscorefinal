@@ -26,7 +26,7 @@ export const OrderHistory = () => {
     try {
       await retryOrder(id);
     } catch (err) {
-      console.error(err);
+      alert('Gagal retry order. Silakan coba lagi.');
     } finally {
       setRetryingId(null);
     }

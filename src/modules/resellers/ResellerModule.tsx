@@ -22,6 +22,7 @@ export const ResellerModule = () => {
   const { resellers, loading, addReseller, updateBalance, updateStatus, deleteReseller } = useResellers();
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,7 +37,7 @@ export const ResellerModule = () => {
       setShowAddForm(false);
       setFormData({ name: '', email: '', initialBalance: 0 });
     } catch (err) {
-      console.error(err);
+      setError('Terjadi kesalahan memuat data.');
     }
   };
 

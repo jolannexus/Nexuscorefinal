@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { Button } from '../components/ui/Button';
+import { SaaSModelManager } from '../modules/System/SaaSModelManager';
 
 export const PaymentSettings = () => {
   const { tenant } = useTenant();
@@ -185,6 +186,8 @@ export const PaymentSettings = () => {
         </form>
 
         <div className="space-y-6">
+           <SaaSModelManager />
+           
            <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-6 space-y-4">
               <h4 className="text-xs font-bold text-white uppercase tracking-wider">Compliance Status</h4>
               <div className="space-y-3">

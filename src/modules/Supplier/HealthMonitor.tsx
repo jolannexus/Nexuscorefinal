@@ -38,7 +38,7 @@ export const HealthMonitor = () => {
         throw new Error('Malformed health response list');
       }
     } catch (error) {
-      console.warn('Using client-side simulated health indicators:', error);
+      
       // Fallback: update matching status metrics randomly for visual feedback
       setHealthData(prev => prev.map(s => s.status === 'Maintenance' ? s : {
         ...s,

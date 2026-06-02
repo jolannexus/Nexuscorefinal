@@ -4,6 +4,20 @@ if (typeof window !== 'undefined') {
   (window as any).__tenantResolutions = (window as any).__tenantResolutions || 0;
 }
 
+const logger = {
+  info: (msg: string, style?: string) => {
+    if (style) {
+      if ((import.meta as any).env.DEV) {
+      if ((import.meta as any).env.DEV) console.info(msg, style);
+    }
+    } else {
+      if ((import.meta as any).env.DEV) {
+      if ((import.meta as any).env.DEV) console.info(msg);
+    }
+    }
+  }
+};
+
 export const diagnostics = {
   /**
    * Safe increment for render counts with console output throttled.
@@ -15,7 +29,7 @@ export const diagnostics = {
     
     // Log message on every 5 renders to avoid console spam but remain visible
     if (map[componentName] % 5 === 0 || map[componentName] <= 3) {
-      console.log(
+      logger.info(
         `%c[DIAGNOSTIC] ${componentName} rendered ${map[componentName]} times`, 
         'color: #8b5cf6; font-weight: bold;'
       );
@@ -29,7 +43,7 @@ export const diagnostics = {
     if (typeof window === 'undefined') return;
     (window as any).__tenantResolutions++;
     const count = (window as any).__tenantResolutions;
-    console.log(
+    logger.info(
       `%c[DIAGNOSTIC: TENANT] #${count} - Resolving tenant for ${hostname}`,
       'color: #10b981; font-weight: bold;'
     );

@@ -1,4 +1,5 @@
 import { SupplierResponse, SupplierStatus } from '../types';
+import { logger } from '../../../lib/logger';
 
 export interface NormalizerOptions {
   timeoutMs?: number;
@@ -89,7 +90,7 @@ export class SupplierResponseNormalizer {
    */
   public static normalizeError(error: any, providerName: string): SupplierResponse<never> {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`[SupplierResponseNormalizer] [${providerName}] Processing runtime error: ${errorMsg}`);
+    logger.error({ providerName, errorMsg }, '[SupplierResponseNormalizer] Processing runtime error');
 
     let statusCode = '500';
     if (errorMsg.includes('timed out') || errorMsg.includes('TimeoutError')) {

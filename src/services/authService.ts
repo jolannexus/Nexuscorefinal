@@ -50,8 +50,7 @@ export const authService = {
   },
 
   async resetPassword(email: string) {
-    console.info(`Password reset requested for: ${email}`);
-  },
+      },
 
   async logout() {
     localStorage.removeItem("nexus_auth_token");

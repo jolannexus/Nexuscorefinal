@@ -5,6 +5,7 @@ import { Button } from './ui/Button';
 
 export const WebhookLogsTable = () => {
   const [logs, setLogs] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [replaying, setReplaying] = useState<string | null>(null);
   const [pendingReplayId, setPendingReplayId] = useState<string | null>(null);
@@ -17,7 +18,7 @@ export const WebhookLogsTable = () => {
       const data = await response.json();
       setLogs(data.logs || []);
     } catch (err) {
-      console.error('Failed to load webhook logs:', err);
+      setError('Gagal memuat log');
     } finally {
       setLoading(false);
     }
@@ -33,7 +34,7 @@ export const WebhookLogsTable = () => {
       });
       fetchLogs();
     } catch (err) {
-      console.error('Failed to replay webhook:', err);
+      setError('Gagal replay webhook');
     } finally {
       setReplaying(null);
     }

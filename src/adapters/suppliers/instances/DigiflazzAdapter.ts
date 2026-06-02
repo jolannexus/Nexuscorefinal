@@ -3,6 +3,7 @@ import { SupplierValidationResult, SupplierResponse, SupplierBalance, SupplierOr
 import { SupplierStatus } from '../../../services/suppliers/types';
 import { SupplierConnection } from '../../../types/index';
 import CryptoJS from 'crypto-js';
+import { logger } from '../../../lib/logger';
 
 export class DigiflazzAdapter extends BaseAdapter {
   id = 'digiflazz';
@@ -109,7 +110,7 @@ export class DigiflazzAdapter extends BaseAdapter {
         message: result.message || 'Malformed balance response: Missing data payload block.'
       };
     } catch (error: any) {
-      console.error('Digiflazz credentials validation error:', error);
+      logger.error({ error }, 'Digiflazz credentials validation error');
       return { isValid: false, message: `Network error connecting to Digiflazz: ${error.message}` };
     }
   }
@@ -121,7 +122,7 @@ export class DigiflazzAdapter extends BaseAdapter {
     const { apiKey, username, resellerId } = this.getCredentials(credentials);
     const activeUsername = resellerId || username;
 
-    console.info(`[${this.name}] Querying deposit balance...`);
+    logger.info({ adapter: this.name }, `Querying deposit balance...`);
     
     return this.withRetry(async () => {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/cek-saldo`, {
@@ -171,7 +172,7 @@ export class DigiflazzAdapter extends BaseAdapter {
     const { apiKey, username, resellerId } = this.getCredentials(credentials);
     const activeUsername = resellerId || username;
 
-    console.info(`[${this.name}] Syncing catalog pricelist catalog...`);
+    logger.info({ adapter: this.name }, `Syncing catalog pricelist catalog...`);
     
     return this.withRetry(async () => {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/price-list`, {
@@ -222,7 +223,7 @@ export class DigiflazzAdapter extends BaseAdapter {
     const { apiKey, username, resellerId } = this.getCredentials(params.credentials);
     const activeUsername = resellerId || username;
 
-    console.info(`[${this.name}] Placing order: ${params.orderId} (Product: ${params.productCode}, Target: ${params.target})`);
+    logger.info({ adapter: this.name, orderId: params.orderId, productCode: params.productCode, target: params.target }, `Placing order`);
 
     return this.withRetry(async () => {
       const payload: any = {
@@ -282,7 +283,7 @@ export class DigiflazzAdapter extends BaseAdapter {
     const { apiKey, username, resellerId } = this.getCredentials(credentials);
     const activeUsername = resellerId || username;
 
-    console.info(`[${this.name}] Verification sync checking status: ${internalOrderId}`);
+    logger.info({ adapter: this.name, internalOrderId }, `Verification sync checking status`);
     
     try {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/transaction`, {
@@ -321,7 +322,7 @@ export class DigiflazzAdapter extends BaseAdapter {
 
   // Backward compatibility mock
   async syncData(connection: SupplierConnection): Promise<void> {
-    console.log(`[Digiflazz] syncData shim triggered.`);
+    logger.info(`[Digiflazz] syncData shim triggered.`);
     await this.getProducts(connection);
   }
 

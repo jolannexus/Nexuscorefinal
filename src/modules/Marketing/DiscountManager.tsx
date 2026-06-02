@@ -31,6 +31,7 @@ interface DiscountManagerProps {
 export const DiscountManager = ({ agencyId }: DiscountManagerProps) => {
   const [discounts, setDiscounts] = useState<DiscountCode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [formData, setFormData] = useState<Partial<DiscountCode>>({
     code: '',
@@ -45,7 +46,7 @@ export const DiscountManager = ({ agencyId }: DiscountManagerProps) => {
       const data = await discountService.getDiscounts(agencyId);
       setDiscounts(data);
     } catch (error) {
-      console.error('Failed to fetch discounts', error);
+      setFetchError('Gagal memuat discount. Coba refresh halaman.');
     } finally {
       setLoading(false);
     }

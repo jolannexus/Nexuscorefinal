@@ -30,6 +30,7 @@ export const OnboardingFlow = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isInitializing, setIsInitializing] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [launchError, setLaunchError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     logo: '',
@@ -67,7 +68,7 @@ export const OnboardingFlow = () => {
       
       navigate('/');
     } catch (error: any) {
-      console.error('Launch failed:', error);
+      setLaunchError('Gagal meluncurkan. Periksa konfigurasi dan coba lagi.');
       setErrorDetails(error.message || 'Workspace setup failed. Check connection.');
       setIsInitializing(false);
     }

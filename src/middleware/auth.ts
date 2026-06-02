@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' 
   ? crypto.randomBytes(32).toString('hex') 
@@ -104,7 +105,7 @@ export const requireRole = (allowedRoles: string[]) => {
 
       next();
     } catch (error) {
-      console.error('Role verification failed:', error);
+      logger.error({ error }, 'Role verification failed');
       res.status(500).json({ error: 'Internal Server Error' });
     }
   };
@@ -127,7 +128,7 @@ export const requirePermission = (permission: Permission) => {
 
       next();
     } catch (error) {
-      console.error('Permission verification failed:', error);
+      logger.error({ error }, 'Permission verification failed');
       res.status(500).json({ error: 'Internal Server Error' });
     }
   }
@@ -141,12 +142,12 @@ export const verifyWebhookSignature = (secretEnvKey: string) => {
     const expectedSecret = process.env[secretEnvKey];
     
     if (!expectedSecret) {
-      console.error(`Webhook secret ${secretEnvKey} is not configured`);
+      logger.error({ secretEnvKey }, `Webhook secret is not configured`);
       return res.status(500).json({ error: 'Configuration Error' });
     }
 
     if (!signature) {
-      console.warn(`[Webhook security] Missing signature from IP: ${req.ip}`);
+      logger.warn({ ip: req.ip }, `[Webhook security] Missing signature from IP`);
       return res.status(401).json({ error: 'Missing webhook signature' });
     }
 
@@ -169,13 +170,13 @@ export const verifyWebhookSignature = (secretEnvKey: string) => {
        const isMatch = compBuf.length === provBuf.length && crypto.timingSafeEqual(compBuf, provBuf);
 
        if (!isMatch) {
-         console.warn(`[Webhook Security] Signature mismatch. Computed: ${computedSignature}, Provided: ${providedHex}`);
+         logger.warn({ computedSignature, providedHex }, `[Webhook Security] Signature mismatch`);
          return res.status(403).json({ error: 'Invalid webhook signature' });
        }
        
        next();
     } catch (err: any) {
-       console.error(`[Webhook Security] HMAC validation crashed: ${err.message}`);
+       logger.error({ error: err }, `[Webhook Security] HMAC validation crashed`);
        return res.status(500).json({ error: 'Internal signature verification failed' });
     }
   };

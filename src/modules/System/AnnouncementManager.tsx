@@ -54,7 +54,7 @@ export const AnnouncementManager = () => {
       });
       loadAnnouncements();
     } catch (err) {
-      console.error(err);
+      alert('Gagal publish announcement. Coba lagi.');
     } finally {
       setLoading(false);
     }
