@@ -15,7 +15,7 @@ export const IncomingWebhooksTable = () => {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('nexus_auth_token')}` }
       });
       const data = await response.json();
-      setLogs(data.logs || []);
+      setLogs(Array.isArray(data) ? data : (Array.isArray(data?.logs) ? data.logs : []));
     } catch (err) {
       setError('Gagal memuat log');
     } finally {

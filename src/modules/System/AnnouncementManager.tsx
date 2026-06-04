@@ -186,7 +186,7 @@ export const AnnouncementManager = () => {
       </AnimatePresence>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {announcements.map((msg) => (
+        {(Array.isArray(announcements) ? announcements : []).map((msg) => (
           <div key={msg.id} className="bg-slate-900/30 border border-slate-800 rounded-3xl p-5 hover:border-slate-800 transition-all group relative">
             <button 
               onClick={() => handleDelete(msg.id)}

@@ -132,7 +132,7 @@ export const CatalogManager = () => {
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">SKU VARIANTS</h4>
               
               <div className="space-y-2">
-                {formData.variants.map((v, index) => (
+                {(Array.isArray(formData?.variants) ? formData.variants : []).map((v, index) => (
                    <div key={v.id} className="grid grid-cols-12 gap-2 bg-slate-900/50 p-2 rounded border border-dashed border-slate-800 items-center">
                     <div className="col-span-5">
                       <input 
@@ -255,7 +255,7 @@ export const CatalogManager = () => {
             Active Ecosystem Catalog
           </h3>
           <div className="space-y-3">
-            {products.map((p) => (
+            {(Array.isArray(products) ? products : []).map((p) => (
               <div key={p.id} className="p-3 bg-slate-950/60 rounded border border-slate-800 hover:border-blue-500/20 group transition-all">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex flex-col">
@@ -276,7 +276,7 @@ export const CatalogManager = () => {
                   </button>
                 </div>
                 <div className="space-y-1.5 pl-2 border-l border-slate-800/50">
-                  {p.variants.map((v) => (
+                  {(Array.isArray(p?.variants) ? p.variants : []).map((v) => (
                     <div key={v.id} className="flex justify-between items-center bg-slate-950/40 p-1.5 rounded">
                       <span className="text-xs text-slate-400 font-bold uppercase">{v.name}</span>
                       <div className="flex items-center gap-3">

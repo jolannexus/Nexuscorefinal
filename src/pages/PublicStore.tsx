@@ -160,9 +160,10 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
     logoUrl: tenant?.logoUrl || ''
   };
 
-  const categories = ['ALL', ...new Set(products.map(p => p.category))];
+  const safeProducts = Array.isArray(products) ? products : [];
+  const categories = ['ALL', ...new Set(safeProducts.map(p => p.category))];
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = safeProducts.filter(p => {
     const searchLower = search.toLowerCase();
     const matchesSearch = p.name.toLowerCase().includes(searchLower) ||
                           p.productCode.toLowerCase().includes(searchLower);

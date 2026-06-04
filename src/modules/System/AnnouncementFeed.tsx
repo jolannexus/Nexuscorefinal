@@ -42,7 +42,7 @@ export const AnnouncementFeed = () => {
       </div>
 
       <div className="space-y-2">
-        {announcements.map((msg) => (
+        {(Array.isArray(announcements) ? announcements : []).map((msg) => (
           <button 
             key={msg.id}
             onClick={() => setSelected(msg)}

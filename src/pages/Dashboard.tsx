@@ -284,7 +284,7 @@ export const Dashboard = () => {
             </div>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Active Connectors</p>
             <p className="text-2xl font-bold text-white tracking-tight">
-              {connections.filter(c => c.status === 'ACTIVE').length} / {connections.length}
+              {safeConnections.filter(c => c.status === 'ACTIVE').length} / {safeConnections.length}
             </p>
           </Card>
 
@@ -296,8 +296,8 @@ export const Dashboard = () => {
             </div>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Global Health Index</p>
             <p className="text-2xl font-bold text-white tracking-tight">
-              {connections.length > 0 
-                ? `${(connections.reduce((acc, c) => acc + (c.successRate || 100), 0) / connections.length).toFixed(1)}%`
+              {safeConnections.length > 0 
+                ? `${(safeConnections.reduce((acc, c) => acc + ((c as any).successRate || 100), 0) / safeConnections.length).toFixed(1)}%`
                 : '100%'}
             </p>
           </Card>
@@ -310,8 +310,8 @@ export const Dashboard = () => {
             </div>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Average Service Latency</p>
             <p className="text-2xl font-bold text-white tracking-tight">
-              {connections.length > 0 
-                ? `${Math.round(connections.reduce((acc, c) => acc + (c.avgResponseTime || 280), 0) / connections.length)}ms`
+              {safeConnections.length > 0 
+                ? `${Math.round(safeConnections.reduce((acc, c) => acc + ((c as any).avgResponseTime || 280), 0) / safeConnections.length)}ms`
                 : '280ms'}
             </p>
           </Card>

@@ -12,7 +12,8 @@ interface MiniLedgerProps {
 
 export const MiniLedger: React.FC<MiniLedgerProps> = ({ transactions, limit = 5 }) => {
   const navigate = useNavigate();
-  const displayTx = transactions.slice(0, limit);
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const displayTx = safeTransactions.slice(0, limit);
 
   return (
     <Card title="Mini Ledger" subtitle="Latest wallet activities">

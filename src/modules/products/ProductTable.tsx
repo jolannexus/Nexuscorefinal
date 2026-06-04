@@ -24,14 +24,15 @@ interface ProductTableProps {
 }
 
 export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }) => {
+  const safeProducts = Array.isArray(products) ? products : [];
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isProcessingBulk, setIsProcessingBulk] = useState(false);
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === products.length) {
+    if (selectedIds.size === safeProducts.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(products.map(p => p.id)));
+      setSelectedIds(new Set(safeProducts.map(p => p.id)));
     }
   };
 
@@ -130,7 +131,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }
                 </td>
               </tr>
             ) : (
-              products.map((product) => (
+              safeProducts.map((product) => (
                 <tr 
                   key={product.id} 
                   className={cn(
@@ -230,7 +231,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, onToggle }
              <h3 className="text-slate-400 font-bold uppercase tracking-wider text-xs">System Empty</h3>
           </div>
         ) : (
-              products.map((product) => (
+              safeProducts.map((product) => (
             <div 
               key={product.id} 
               className={cn(

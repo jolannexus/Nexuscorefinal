@@ -58,12 +58,14 @@ export const DepositHub = () => {
     }).format(amount);
   };
 
+  const safeDeposits = Array.isArray(deposits) ? deposits : [];
+
   return (
     <Card className="border-emerald-900/40 bg-emerald-950/5 h-full">
       <SectionHeader title="Deposit Queue" icon={Wallet} colorClass="text-emerald-400" />
       
       <div className="space-y-3 mt-4 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
-        {deposits.map((d) => (
+        {safeDeposits.map((d) => (
           <div key={d.id} className="flex justify-between items-center p-3 bg-slate-950/50 rounded-2xl border border-slate-800 group hover:border-emerald-500/20 transition-all">
              <div className="flex flex-col gap-1">
                 <span className="text-xs font-bold text-white uppercase tracking-tight truncate max-w-[120px]">

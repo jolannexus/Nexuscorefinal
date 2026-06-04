@@ -31,7 +31,7 @@ export const GameDatabase = () => {
     const fetchProducts = async () => {
       setLoading(true);
       const data = await productService.getProducts('nexus-demo', { includeGames: true });
-      setProducts(data.filter(p => p.id.startsWith('game_') || p.category === 'Games'));
+      setProducts(Array.isArray(data) ? data.filter(p => p.id.startsWith('game_') || p.category === 'Games') : []);
       setLoading(false);
     };
     fetchProducts();

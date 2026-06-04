@@ -52,12 +52,12 @@ export const TicketSystem = () => {
   const loadTickets = async () => {
     if (!user) return;
     const data = await ticketService.getTickets(isAdmin ? undefined : user.uid);
-    setTickets(data);
+    setTickets(Array.isArray(data) ? data : []);
   };
 
   const loadMessages = async (ticketId: string) => {
     const data = await ticketService.getTicketMessages(ticketId);
-    setMessages(data);
+    setMessages(Array.isArray(data) ? data : []);
   };
 
   const handleCreate = async (e: React.FormEvent) => {

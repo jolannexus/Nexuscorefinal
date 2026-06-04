@@ -18,9 +18,12 @@ interface BulkPricingControlProps {
 }
 
 export const BulkPricingControl: React.FC<BulkPricingControlProps> = ({ categories, platforms, onComplete }) => {
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safePlatforms = Array.isArray(platforms) ? platforms : [];
+
   const [rule, setRule] = useState<PricingRule>({
     targetType: 'CATEGORY',
-    targetValue: categories[0] || '',
+    targetValue: safeCategories[0] || '',
     marginType: 'PERCENTAGE',
     marginValue: 10
   });
@@ -90,7 +93,7 @@ export const BulkPricingControl: React.FC<BulkPricingControlProps> = ({ categori
               onChange={(e) => setRule({ ...rule, targetValue: e.target.value })}
               className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-xs font-medium text-white outline-none focus:border-purple-500/50 appearance-none cursor-pointer"
             >
-              {(rule.targetType === 'CATEGORY' ? categories : platforms).map(val => (
+              {(rule.targetType === 'CATEGORY' ? safeCategories : safePlatforms).map(val => (
                 <option key={val} value={val}>{val}</option>
               ))}
             </select>

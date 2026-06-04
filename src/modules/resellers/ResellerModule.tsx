@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 
 export const ResellerModule = () => {
   const { resellers, loading, addReseller, updateBalance, updateStatus, deleteReseller } = useResellers();
+  const safeResellers = Array.isArray(resellers) ? resellers : [];
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +42,7 @@ export const ResellerModule = () => {
     }
   };
 
-  const filteredResellers = resellers.filter(r => 
+  const filteredResellers = safeResellers.filter(r => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     r.email.toLowerCase().includes(searchQuery.toLowerCase())
   );

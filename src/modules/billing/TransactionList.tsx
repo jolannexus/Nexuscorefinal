@@ -44,17 +44,19 @@ export const TransactionList = () => {
     }).format(amount);
   };
 
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+
   return (
     <div className="space-y-4">
       <div className="space-y-3">
         {loading ? (
           <TableSkeleton rows={8} columns={3} />
-        ) : transactions.length === 0 ? (
+        ) : safeTransactions.length === 0 ? (
           <div className="p-6 md:p-12 text-center text-xs text-slate-500 font-medium bg-slate-900/50 border border-slate-800 rounded-3xl">
             No transactions found in this wallet.
           </div>
         ) : (
-          transactions.map(t => {
+          safeTransactions.map(t => {
             const isDebitLike = ['DEBIT', 'FREEZE', 'CONFIRM_DEBIT'].includes(t.type);
             const isCreditLike = ['CREDIT', 'UNFREEZE', 'DEPOSIT'].includes(t.type) || t.description?.toLowerCase().includes('deposit');
             

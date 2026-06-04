@@ -19,7 +19,7 @@ export const BalanceAlerts = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setAlerts(data.alerts || []);
+        setAlerts(Array.isArray(data) ? data : (Array.isArray(data?.alerts) ? data.alerts : []));
       }
     } catch (err) {
       
@@ -34,6 +34,8 @@ export const BalanceAlerts = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const safeAlerts = Array.isArray(alerts) ? alerts : [];
+
   if (loading) {
     return (
       <Card className="border-white/5 bg-white/[0.01]/5 animate-pulse h-32 flex items-center justify-center">
@@ -44,14 +46,14 @@ export const BalanceAlerts = () => {
   }
 
   return (
-    <Card className={`border-l-4 transition-all ${alerts.length > 0 ? 'border-l-rose-500 border-rose-950/20 bg-rose-950/5' : 'border-l-emerald-500 border-white/5 bg-white/[0.01]'}`}>
+    <Card className={`border-l-4 transition-all ${safeAlerts.length > 0 ? 'border-l-rose-500 border-rose-950/20 bg-rose-950/5' : 'border-l-emerald-500 border-white/5 bg-white/[0.01]'}`}>
       <SectionHeader 
         title="Ledger Balance Integration Diagnostics" 
-        icon={alerts.length > 0 ? ShieldAlert : ShieldCheck} 
-        colorClass={alerts.length > 0 ? 'text-rose-400 font-bold tracking-tight animate-pulse' : 'text-emerald-400'} 
+        icon={safeAlerts.length > 0 ? ShieldAlert : ShieldCheck} 
+        colorClass={safeAlerts.length > 0 ? 'text-rose-400 font-bold tracking-tight animate-pulse' : 'text-emerald-400'} 
       />
       <div className="space-y-3 mt-4">
-        {alerts.length === 0 ? (
+        {safeAlerts.length === 0 ? (
           <div className="p-3.5 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
             <div>
@@ -60,7 +62,7 @@ export const BalanceAlerts = () => {
             </div>
           </div>
         ) : (
-          alerts.map((alert) => (
+          safeAlerts.map((alert) => (
             <div key={alert.id} className="p-3.5 bg-rose-500/5 rounded-xl border border-rose-500/15 flex items-start gap-3">
               <AlertTriangle className="w-4.5 h-4.5 text-rose-400 shrink-0 mt-0.5 animate-bounce" />
               <div className="space-y-1">

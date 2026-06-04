@@ -44,7 +44,7 @@ export const LedgerDriftMonitor = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setRecords(data.records || []);
+        setRecords(Array.isArray(data) ? data : (Array.isArray(data?.records) ? data.records : []));
       }
     } catch (err) {
       
@@ -103,7 +103,8 @@ export const LedgerDriftMonitor = () => {
     }
   };
 
-  const discrepancyCount = records.filter(r => r.status === 'DISCREPANCY').length;
+  const safeRecords = Array.isArray(records) ? records : [];
+  const discrepancyCount = safeRecords.filter(r => r.status === 'DISCREPANCY').length;
 
   return (
     <Card className="border-slate-800 bg-slate-950">
@@ -127,7 +128,7 @@ export const LedgerDriftMonitor = () => {
       </div>
 
       <div className="space-y-3">
-        {records.length === 0 ? (
+        {safeRecords.length === 0 ? (
           <div className="text-center py-8 border border-white/5 bg-white/5 rounded-xl border-dashed">
             <CheckCircle className="w-8 h-8 text-slate-600 mx-auto mb-2" />
             <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">No Reconciliation Records</p>
@@ -147,7 +148,7 @@ export const LedgerDriftMonitor = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {records.map((record) => {
+                {safeRecords.map((record) => {
                   const drift = Number(record.actualAmount) - Number(record.expectedAmount);
                   return (
                     <tr key={record.id} className="text-[10px] hover:bg-white/5 group">

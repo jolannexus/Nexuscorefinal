@@ -31,7 +31,7 @@ export const StreamingDatabase = () => {
       setLoading(true);
       const data = await productService.getProducts('nexus-demo', { includeStreaming: true });
       // Filter for streaming only if needed, but the generator only makes streaming mostly
-      setProducts(data.filter(p => p.supplierId === 'nexus_fulfillment_v4' || p.category === 'Live Streaming'));
+      setProducts(Array.isArray(data) ? data.filter(p => p.supplierId === 'nexus_fulfillment_v4' || p.category === 'Live Streaming') : []);
       setLoading(false);
     };
     fetchProducts();

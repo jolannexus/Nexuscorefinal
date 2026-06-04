@@ -44,7 +44,7 @@ export const DiscountManager = ({ agencyId }: DiscountManagerProps) => {
   const fetchDiscounts = async () => {
     try {
       const data = await discountService.getDiscounts(agencyId);
-      setDiscounts(data);
+      setDiscounts(Array.isArray(data) ? data : []);
     } catch (error) {
       setFetchError('Gagal memuat discount. Coba refresh halaman.');
     } finally {

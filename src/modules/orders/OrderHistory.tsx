@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 export const OrderHistory = () => {
   const { t } = useTranslation();
   const { orders, loading, retryOrder } = useOrders();
+  const safeOrders = Array.isArray(orders) ? orders : [];
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const handleRetry = async (id: string) => {
@@ -32,7 +33,7 @@ export const OrderHistory = () => {
     }
   };
 
-  if (loading && !orders.length) {
+  if (loading && !safeOrders.length) {
     return <div className="h-48 flex items-center justify-center text-slate-500 text-xs font-semibold">{t('orders.loading')}</div>;
   }
 
@@ -43,7 +44,7 @@ export const OrderHistory = () => {
           <ClipboardList className="w-4 h-4 text-emerald-500" />
           {t('orders.recentTransactions')}
         </h2>
-        <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">{orders.length} {t('orders.records')}</span>
+        <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">{safeOrders.length} {t('orders.records')}</span>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl w-full">
@@ -58,7 +59,7 @@ export const OrderHistory = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/50 font-sans">
-            {orders.length === 0 ? (
+            {safeOrders.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-5 py-20 text-center flex flex-col items-center justify-center gap-2">
                   <span className="text-sm text-slate-400 font-bold uppercase tracking-wider">{t('orders.noTransactions')}</span>
@@ -66,7 +67,7 @@ export const OrderHistory = () => {
                 </td>
               </tr>
             ) : (
-              orders.map((order) => (
+              safeOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-5 py-4">
                     <div className="flex flex-col">

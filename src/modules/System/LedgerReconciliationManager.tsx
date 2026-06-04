@@ -384,7 +384,7 @@ export const LedgerReconciliationManager = () => {
                             </td>
                           </tr>
                         ) : (
-                          reconciliationReport.driftReports.map((report, idx) => (
+                          (Array.isArray(reconciliationReport.driftReports) ? reconciliationReport.driftReports : []).map((report, idx) => (
                             <tr key={idx} className="border-b border-white/5 hover:bg-white/5 text-[10px]">
                               <td className="py-2 px-3 font-mono text-slate-300">{report.walletId.substring(0, 8)}...</td>
                               <td className="py-2 px-3 font-medium text-slate-400">{report.userId.substring(0, 8)}...</td>
@@ -432,7 +432,7 @@ export const LedgerReconciliationManager = () => {
                             </td>
                           </tr>
                         ) : (
-                          reconciliationReport.orphanedReports.map((orph, idx) => (
+                          (Array.isArray(reconciliationReport.orphanedReports) ? reconciliationReport.orphanedReports : []).map((orph, idx) => (
                             <tr key={idx} className="border-b border-white/5 hover:bg-white/5 text-[10px]">
                               <td className="py-2 px-3 font-mono text-slate-300">{orph.transactionId}</td>
                               <td className="py-2 px-3 text-amber-500 uppercase tracking-wider font-bold text-[9px]">{orph.status}</td>
@@ -583,7 +583,8 @@ export const LedgerReconciliationManager = () => {
                 {[1, 2, 4].map(i => <div key={i} className="h-10 bg-white/5 border border-white/10 rounded-lg animate-pulse" />)}
               </div>
             ) : (() => {
-              const filtered = auditLogs.filter(l => {
+              const safeAuditLogs = Array.isArray(auditLogs) ? auditLogs : [];
+              const filtered = safeAuditLogs.filter(l => {
                 if (!searchTerm.trim()) return true;
                 const term = searchTerm.toLowerCase();
                 return (
@@ -676,13 +677,13 @@ export const LedgerReconciliationManager = () => {
             <div className="space-y-4">
               {[1, 2, 3].map(i => <div key={i} className="h-16 bg-white/5 border border-white/10 rounded-xl animate-pulse" />)}
             </div>
-          ) : journals.length === 0 ? (
+          ) : (Array.isArray(journals) ? journals : []).length === 0 ? (
             <div className="py-12 text-center text-[11px] text-slate-500">
               No ledger records found yet. Place some orders or deposit cash to generate double-entry ledgers.
             </div>
           ) : (
             <div className="space-y-4">
-              {journals.map((journal) => (
+              {(Array.isArray(journals) ? journals : []).map((journal) => (
                 <div 
                   key={journal.id} 
                   className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-3 hovering-bright"
@@ -702,7 +703,7 @@ export const LedgerReconciliationManager = () => {
                   </p>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-white/5 pt-3">
-                    {journal.entries.map((entry) => (
+                    {(Array.isArray(journal.entries) ? journal.entries : []).map((entry) => (
                       <div 
                         key={entry.id} 
                         className={`p-2.5 rounded-lg text-[10px] flex justify-between items-center ${

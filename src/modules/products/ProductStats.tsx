@@ -7,12 +7,13 @@ interface ProductStatsProps {
 }
 
 export const ProductStats: React.FC<ProductStatsProps> = ({ products }) => {
-  const activeCount = products.filter(p => p.isEnabled).length;
-  const disabledCount = products.filter(p => !p.isEnabled).length;
-  const supplierCount = new Set(products.map(p => p.supplierId)).size;
+  const safeProducts = Array.isArray(products) ? products : [];
+  const activeCount = safeProducts.filter(p => p.isEnabled).length;
+  const disabledCount = safeProducts.filter(p => !p.isEnabled).length;
+  const supplierCount = new Set(safeProducts.map(p => p.supplierId)).size;
 
   const stats = [
-    { label: 'Total Services', value: products.length, icon: Package, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Total Services', value: safeProducts.length, icon: Package, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Active Channels', value: activeCount, icon: Power, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Disabled Units', value: disabledCount, icon: PowerOff, color: 'text-red-500', bg: 'bg-red-500/10' },
     { label: 'Connected Providers', value: supplierCount, icon: RefreshCw, color: 'text-blue-500', bg: 'bg-blue-500/10' },
