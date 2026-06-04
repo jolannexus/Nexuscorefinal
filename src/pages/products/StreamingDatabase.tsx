@@ -48,7 +48,7 @@ export const StreamingDatabase = () => {
   }, [products, searchQuery, selectedPlatform, selectedCategory]);
 
   const categories = useMemo(() => {
-    const cats = new Set(products.map(p => p.category));
+    const cats = new Set((Array.isArray(products) ? products : []).map(p => p.category));
     return ['ALL', ...Array.from(cats)];
   }, [products]);
 
