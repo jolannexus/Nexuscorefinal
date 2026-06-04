@@ -8339,8 +8339,17 @@ async function startServer() {
   }
   if (isProd) {
     const distPath2 = import_path.default.join(process.cwd(), "dist");
-    app.use(import_express.default.static(distPath2));
+    app.use(import_express.default.static(distPath2, {
+      index: false,
+      maxAge: "1y",
+      immutable: true
+    }));
     app.get("*", (req, res) => {
+      res.set({
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0"
+      });
       res.sendFile(import_path.default.join(distPath2, "index.html"));
     });
   } else {

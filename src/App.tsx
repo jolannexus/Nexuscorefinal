@@ -55,11 +55,15 @@ const safeLazy = (importFunction: () => Promise<any>) =>
       
       const isChunkLoadError = 
         error?.name === 'ChunkLoadError' || 
-        /Failed to fetch|dynamically imported|Loading chunk/i.test(error?.message || '');
-        
+        /Loading chunk/i.test(error?.message || '') || 
+        /Failed to fetch/i.test(error?.message || '');
+      
+      if (isChunkLoadError) {
+        console.error('Chunk load error detected:', error);
+      }
+
       if (isChunkLoadError && !isReloadThrottled()) {
         incrementReloadCount();
-        
         window.location.reload();
         return { default: () => <div /> };
       }

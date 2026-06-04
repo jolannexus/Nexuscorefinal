@@ -2491,8 +2491,17 @@ async function startServer() {
 
   if (isProd) {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      index: false,
+      maxAge: '1y',
+      immutable: true,
+    }));
     app.get("*", (req, res) => {
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      });
       res.sendFile(path.join(distPath, "index.html"));
     });
   } else {
