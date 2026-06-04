@@ -55,15 +55,11 @@ const safeLazy = (importFunction: () => Promise<any>) =>
       
       const isChunkLoadError = 
         error?.name === 'ChunkLoadError' || 
-        /Loading chunk/i.test(error?.message || '') || 
-        /Failed to fetch/i.test(error?.message || '');
-      
-      if (isChunkLoadError) {
-        console.error('Chunk load error detected:', error);
-      }
-
+        /Failed to fetch|dynamically imported|Loading chunk/i.test(error?.message || '');
+        
       if (isChunkLoadError && !isReloadThrottled()) {
         incrementReloadCount();
+        
         window.location.reload();
         return { default: () => <div /> };
       }
@@ -72,9 +68,16 @@ const safeLazy = (importFunction: () => Promise<any>) =>
         default: () => (
           <div className="flex flex-col items-center justify-center p-8 bg-slate-900 border border-slate-800 rounded-2xl max-w-lg mx-auto my-12 text-center font-mono text-slate-300">
             <h3 className="text-red-500 font-bold mb-2 uppercase tracking-wider text-rose-500">Loading Error</h3>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-slate-400 mb-4 max-w-sm">
               We couldn't load this section of the app. This usually happens when a new version of the system has been deployed.
             </p>
+            {error && (
+              <div className="w-full text-left bg-black/30 p-3 rounded-lg mb-4 overflow-x-auto">
+                <p className="text-red-400 text-[10px] break-words whitespace-pre-wrap font-mono">
+                  {error?.message || String(error)}
+                </p>
+              </div>
+            )}
             <button 
               onClick={() => {
                 clearReloadCount();

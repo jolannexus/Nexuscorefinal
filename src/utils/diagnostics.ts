@@ -6,14 +6,12 @@ if (typeof window !== 'undefined') {
 
 const logger = {
   info: (msg: string, style?: string) => {
-    if (style) {
-      if ((import.meta as any).env.DEV) {
-      if ((import.meta as any).env.DEV) console.info(msg, style);
-    }
-    } else {
-      if ((import.meta as any).env.DEV) {
-      if ((import.meta as any).env.DEV) console.info(msg);
-    }
+    if (import.meta.env.DEV) {
+      if (style) {
+        console.info(msg, style);
+      } else {
+        console.info(msg);
+      }
     }
   }
 };

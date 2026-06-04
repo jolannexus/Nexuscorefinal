@@ -1,7 +1,7 @@
-import * as React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface State {
@@ -9,21 +9,20 @@ interface State {
   error?: Error;
 }
 
-export class GlobalErrorBoundary extends React.Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+export class GlobalErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false
+  };
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Fatal global error:', error, errorInfo);
   }
 
-  public render(): React.ReactNode {
+  public render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-slate-200">

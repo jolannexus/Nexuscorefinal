@@ -2,9 +2,9 @@ import Redis from 'ioredis';
 import { env } from './env';
 import { logger } from './logger';
 
-const globalForRedis = globalThis as unknown as { redisClient: Redis | undefined };
+const globalForRedis = globalThis as unknown as { redisClient: Redis };
 
-export function getRedisClient(): any {
+export function getRedisClient(): Redis {
   if (globalForRedis.redisClient) {
     return globalForRedis.redisClient;
   }
@@ -22,7 +22,7 @@ export function getRedisClient(): any {
 
   const url = env.REDIS_URL;
 
-  const client = new Redis(url, redisConfig as any) as any;
+  const client = new Redis(url, redisConfig);
 
   client.on('error', (err) => {
     logger.error(err, 'Redis connection error');
@@ -32,7 +32,7 @@ export function getRedisClient(): any {
     logger.info('Redis connected succesfully');
   });
 
-  globalForRedis.redisClient = client as any;
+  globalForRedis.redisClient = client;
 
   return client;
 }

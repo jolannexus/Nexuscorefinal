@@ -2,10 +2,10 @@ import { Product, SupplierConnection } from '../../types/index';
 import { authService } from '../authService';
 
 const logger = {
-  info: (...args: any[]) => { if ((import.meta as any).env.DEV) console.info(...args); },
-  debug: (...args: any[]) => { if ((import.meta as any).env.DEV) console.debug(...args); },
-  warn: (...args: any[]) => { if ((import.meta as any).env.DEV) console.warn(...args); },
-  error: (...args: any[]) => { if ((import.meta as any).env.DEV) console.error(...args); },
+  info: (...args: any[]) => { if (import.meta.env.DEV) console.info(...args); },
+  debug: (...args: any[]) => { if (import.meta.env.DEV) console.debug(...args); },
+  warn: (...args: any[]) => { if (import.meta.env.DEV) console.warn(...args); },
+  error: (...args: any[]) => { if (import.meta.env.DEV) console.error(...args); },
 };
 
 export const productService = {

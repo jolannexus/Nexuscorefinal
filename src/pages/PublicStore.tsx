@@ -160,7 +160,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
     logoUrl: tenant?.logoUrl || ''
   };
 
-  const categories = ['ALL', ...Array.from(new Set(products.map((p) => p.category || 'General')))] as string[];
+  const categories = ['ALL', ...new Set(products.map(p => p.category))];
 
   const filteredProducts = products.filter(p => {
     const searchLower = search.toLowerCase();
@@ -354,7 +354,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
 
             <div className="flex gap-3 overflow-x-auto pb-4 w-full md:w-auto custom-scrollbar">
               {categories.map((cat) => {
-                const Icon = CATEGORY_ICONS[cat as keyof typeof CATEGORY_ICONS] || ShoppingBag;
+                const Icon = CATEGORY_ICONS[cat] || ShoppingBag;
                 return (
                   <button
                     key={cat}

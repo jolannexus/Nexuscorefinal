@@ -19,7 +19,7 @@ export const pricingService = {
    * Applies individual pricing markup rule formulas locally in memory.
    */
   async applyRule(rule: PricingRule): Promise<void> {
-    if ((import.meta as any).env.DEV) console.info("Pricing rule applied locally in memory:", rule);
+    if (import.meta.env.DEV) console.info("Pricing rule applied locally in memory:", rule);
   },
 
   /**

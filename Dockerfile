@@ -1,6 +1,5 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache openssl
 COPY package*.json ./
 RUN npm ci
 COPY prisma ./prisma
@@ -13,13 +12,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-FROM node:20-alpine AS runner
+FROM gcr.io/distroless/nodejs20-debian12 AS runner
 WORKDIR /app
-RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+USER 65532:65532
 EXPOSE 3000
 ENV NODE_ENV=production
-CMD ["node", "dist/server.cjs"]
+CMD ["dist/server.cjs"]
