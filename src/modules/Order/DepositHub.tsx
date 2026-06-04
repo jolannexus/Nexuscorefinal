@@ -22,7 +22,7 @@ export const DepositHub = () => {
   const loadDeposits = async () => {
     if (!profile?.agencyId) return;
     const data = await BillingService.getPendingDeposits(profile.agencyId);
-    setDeposits(data);
+    setDeposits(Array.isArray(data) ? data : []);
   };
 
   const handleApprove = async (tx: Transaction) => {

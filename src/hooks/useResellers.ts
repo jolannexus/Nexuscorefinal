@@ -15,7 +15,7 @@ export const useResellers = () => {
     setLoading(true);
     try {
       const data = await resellerService.getResellers(profile.agencyId);
-      setResellers(data);
+      setResellers(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch resellers');

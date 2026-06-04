@@ -42,7 +42,7 @@ export const Storefront = ({ resellerData }: StorefrontProps) => {
 
   const loadProducts = async (agencyId: string) => {
     const data = await productService.getProducts(agencyId);
-    setProducts(data.filter(p => p.isEnabled));
+    setProducts(Array.isArray(data) ? data.filter(p => p.isEnabled) : []);
     setLoading(false);
   };
 

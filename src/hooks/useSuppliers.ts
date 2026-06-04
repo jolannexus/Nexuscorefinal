@@ -14,7 +14,7 @@ export const useSuppliers = () => {
     setLoading(true);
     try {
       const data = await supplierService.getConnections(profile.agencyId);
-      setConnections(data);
+      setConnections(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch connections');

@@ -23,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export const SupplierModule = () => {
   const { connections, loading, deleteConnection, syncConnection, syncProducts } = useSuppliers();
+  const safeConnections = Array.isArray(connections) ? connections : [];
   const { profile } = useAuth();
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,13 +89,13 @@ export const SupplierModule = () => {
         )}
       </div>
 
-      {loading && !connections.length ? (
+      {loading && !safeConnections.length ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
             <div key={i} className="h-48 bg-slate-900/50 border border-slate-800 rounded-2xl animate-pulse" />
           ))}
         </div>
-      ) : connections.length === 0 ? (
+      ) : safeConnections.length === 0 ? (
         <div className="bg-slate-900/20 border-2 border-dashed border-slate-800 rounded-[32px] p-16 flex flex-col items-center justify-center text-center">
           <div className="w-20 h-20 bg-slate-800 rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
             <Settings2 className="w-10 h-10 text-slate-600" />
@@ -112,7 +113,7 @@ export const SupplierModule = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {connections.map((conn) => (
+          {safeConnections.map((conn) => (
             <motion.div 
               layout
               initial={{ opacity: 0, scale: 0.95 }}

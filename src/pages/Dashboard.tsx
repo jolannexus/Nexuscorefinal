@@ -112,6 +112,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { user, role, profile } = useAuth();
   const { connections, loading: suppliersLoading } = useSuppliers();
+  const safeConnections = Array.isArray(connections) ? connections : [];
   const [showTopUp, setShowTopUp] = React.useState(false);
   const [showBranding, setShowBranding] = React.useState(false);
 
@@ -124,8 +125,8 @@ export const Dashboard = () => {
     status: 'ACTIVE',
     branding: null 
   } as Reseller;
-  const recentOrders = stats?.recentOrders || [];
-  const recentTransactions = stats?.recentTransactions || [];
+  const recentOrders = Array.isArray(stats?.recentOrders) ? stats.recentOrders : [];
+  const recentTransactions = Array.isArray(stats?.recentTransactions) ? stats.recentTransactions : [];
 
   const handleBrandingUpdate = async (branding: NonNullable<Reseller['branding']>) => {
     // API mutation goes here
@@ -324,7 +325,7 @@ export const Dashboard = () => {
                 <div className="flex items-center justify-center p-8">
                   <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                 </div>
-              ) : connections.length === 0 ? (
+              ) : safeConnections.length === 0 ? (
                 <div className="p-8 text-center bg-white/[0.01] border border-white/5 rounded-2xl">
                   <Cpu className="w-8 h-8 text-slate-600 mx-auto mb-3" />
                   <p className="text-xs text-slate-400 font-semibold mb-2">No Connected Adapters Found</p>
@@ -337,7 +338,7 @@ export const Dashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-4 mt-4">
-                  {connections.map((conn) => (
+                  {safeConnections.map((conn) => (
                     <div 
                       key={conn.id} 
                       className="p-4 rounded-xl border border-white/5 bg-black/20 hover:bg-white/[0.02] transition-all flex items-center justify-between"

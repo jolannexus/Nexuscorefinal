@@ -27,7 +27,7 @@ export const AnnouncementFeed = () => {
 
   const loadAnnouncements = async () => {
     const data = await announcementService.getLatestAnnouncements(role as Role, 5);
-    setAnnouncements(data);
+    setAnnouncements(Array.isArray(data) ? data : []);
   };
 
   if (announcements.length === 0) return null;

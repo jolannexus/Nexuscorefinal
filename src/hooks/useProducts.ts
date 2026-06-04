@@ -17,7 +17,7 @@ export const useProducts = () => {
     setLoading(true);
     try {
       const data = await productService.getProducts(profile.agencyId);
-      setProducts(data);
+      setProducts(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch products');

@@ -14,7 +14,7 @@ export const useOrders = () => {
     setLoading(true);
     try {
       const data = await orderService.getOrders(profile.agencyId);
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch orders');

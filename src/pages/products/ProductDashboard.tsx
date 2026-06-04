@@ -25,17 +25,19 @@ import { productService } from '../../services/products/productService';
 export const ProductDashboard = () => {
   const { profile } = useAuth();
   const { products, loading, syncProducts } = useProducts();
+  const safeProducts = Array.isArray(products) ? products : [];
   const { connections } = useSuppliers();
+  const safeConnections = Array.isArray(connections) ? connections : [];
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('TABLE');
   const [showPricingControl, setShowPricingControl] = useState(false);
 
-  const categories = Array.from(new Set(products.map(p => p.category)));
-  const platforms = Array.from(new Set(products.map(p => p.appName)));
+  const categories = Array.from(new Set(safeProducts.map(p => p.category)));
+  const platforms = Array.from(new Set(safeProducts.map(p => p.appName)));
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = safeProducts.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          p.productCode.includes(searchQuery);
     const matchesCategory = !selectedCategory || p.category === selectedCategory;
@@ -43,10 +45,10 @@ export const ProductDashboard = () => {
   });
 
   const handleGlobalSync = async () => {
-    if (connections.length === 0) return;
+    if (safeConnections.length === 0) return;
     setSyncing(true);
     try {
-      for (const conn of connections) {
+      for (const conn of safeConnections) {
         if (conn.status === 'ACTIVE') {
           await syncProducts(conn);
         }
@@ -123,7 +125,7 @@ export const ProductDashboard = () => {
       </AnimatePresence>
 
       {/* Stats Overview */}
-      <ProductStats products={products} />
+      <ProductStats products={safeProducts} />
 
       {/* Management Area */}
       <div className="space-y-6">

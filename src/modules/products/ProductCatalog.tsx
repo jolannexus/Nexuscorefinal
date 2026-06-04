@@ -19,15 +19,17 @@ import { Product } from '../../types';
 
 export const ProductCatalog = () => {
   const { products, loading, syncProducts } = useProducts();
+  const safeProducts = Array.isArray(products) ? products : [];
   const { connections } = useSuppliers();
+  const safeConnections = Array.isArray(connections) ? connections : [];
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  const categories = Array.from(new Set(safeProducts.map(p => p.category)));
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = safeProducts.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          p.productCode.includes(searchQuery);
     const matchesCategory = !selectedCategory || p.category === selectedCategory;
@@ -35,10 +37,10 @@ export const ProductCatalog = () => {
   });
 
   const handleGlobalSync = async () => {
-    if (connections.length === 0) return;
+    if (safeConnections.length === 0) return;
     setSyncing(true);
     try {
-      for (const conn of connections) {
+      for (const conn of safeConnections) {
         if (conn.status === 'ACTIVE') {
           await syncProducts(conn);
         }

@@ -33,7 +33,7 @@ export const AnnouncementManager = () => {
   const loadAnnouncements = async () => {
     // Admin can see everything essentially, but for simplicity we fetch a general list
     const data = await announcementService.getLatestAnnouncements('SUPER_ADMIN' as Role, 20);
-    setAnnouncements(data);
+    setAnnouncements(Array.isArray(data) ? data : []);
   };
 
   const handleCreate = async (e: React.FormEvent) => {

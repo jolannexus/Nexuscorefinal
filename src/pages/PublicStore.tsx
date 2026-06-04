@@ -143,7 +143,7 @@ export const PublicStore = ({ tenant, isLoading: tenantLoading }: { tenant: any,
     fetch(`/api/products/public/${tenant.id}`)
       .then(res => res.json())
       .then(data => {
-        setProducts(data);
+        setProducts(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(err => {

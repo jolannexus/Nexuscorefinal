@@ -28,7 +28,7 @@ export const TransactionList = () => {
        if (!res.ok) throw new Error('Failed to fetch transactions');
        const data = await res.json();
        // Normalize date for display
-       return data.map((t: any) => ({
+       return (Array.isArray(data) ? data : []).map((t: any) => ({
          ...t,
          createdAt: { toDate: () => new Date(t.createdAt) }
        })) as Transaction[];
