@@ -46,7 +46,7 @@ export const Storefront = ({ resellerData }: StorefrontProps) => {
     setLoading(false);
   };
 
-  const categories = ['ALL', ...new Set(products.map(p => p.category))];
+  const categories = ['ALL', ...Array.from(new Set(products.map((p) => p.category || 'General')))] as string[];
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -119,7 +119,7 @@ export const Storefront = ({ resellerData }: StorefrontProps) => {
 
                 <div className="flex gap-2 overflow-x-auto pb-4 w-full md:w-auto custom-scrollbar">
           {categories.map((cat) => {
-            const Icon = CATEGORY_ICONS[cat] || Package;
+            const Icon = CATEGORY_ICONS[cat as keyof typeof CATEGORY_ICONS] || Package;
             return (
               <button
                 key={cat}
