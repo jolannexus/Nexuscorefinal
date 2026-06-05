@@ -42,10 +42,10 @@ export const CatalogManager = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      setProducts((Array.isArray(products) ? products : []).map(p => p.id === editingId ? { ...p, ...formData } : p));
+      setProducts(products.map(p => p.id === editingId ? { ...p, ...formData } : p));
       setEditingId(null);
     } else {
-      setProducts([...(Array.isArray(products) ? products : []), { id: Date.now(), ...formData }]);
+      setProducts([...products, { id: Date.now(), ...formData }]);
     }
     setFormData({ name: '', category: 'Mobile Legends', status: 'Active', variants: [] });
   };
